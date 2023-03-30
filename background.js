@@ -60,8 +60,10 @@ const queryParams = [
   
   // Function to add a modified URL
   function addModifiedUrl(url) {
-    modifiedUrls.add(url);
-    incrementCount(); // Increment the counter and update the badge text when a new URL is added
+    if (!modifiedUrls.has(url)) {
+      modifiedUrls.add(url);
+      chrome.browserAction.setBadgeText({text: modifiedUrls.size.toString()});
+    }
   }
   
   // Function to get modified URLs
