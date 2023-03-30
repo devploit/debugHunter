@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
     "name": "debugHunter",
-    "version": "1.0",
-    "description": "Discover hidden debugging parameters and uncover web application traces.",
+    "version": "1.0.0",
+    "description": "Discover hidden debugging parameters and uncover web application secrets",
     "icons": {
       "48": "images/icon.png"
     },
