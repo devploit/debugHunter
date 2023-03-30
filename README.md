@@ -6,7 +6,7 @@
 
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/devploit/dontgo403/issues)
 
-Discover hidden debugging parameters and uncover web application secrets with debugHunter, your ultimate web exploration companion. This Chrome extension intelligently scans websites for debugging parameters and notifies you when it finds a URL with modified responses.
+Discover hidden debugging parameters and uncover web application secrets with debugHunter. This Chrome extension scans websites for debugging parameters and notifies you when it finds a URL with modified responses.
 
 ## Features
 
