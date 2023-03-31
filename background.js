@@ -111,7 +111,7 @@ function isDifferentResponse(originalText, modifiedText) {
   );
 
   // Set a threshold for similarity; responses with similarity below this threshold are considered different
-  const similarityThreshold = 0.93;
+  const similarityThreshold = 0.90;
 
   // Return true if the similarity is below the threshold
   return similarity < similarityThreshold;
