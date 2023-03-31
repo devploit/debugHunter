@@ -1,40 +1,40 @@
 // List of query parameters to append
 const queryParams = [
   { key: "_debug", value: "1" },
-  { key: "test", value: "1" },
   { key: "admin", value: "1" },
-  { key: "debug", value: "1" },
-  { key: "env", value: "pre" },   
-  { key: "dev", value: "1" },
-  { key: "staging", value: "1" },
-  { key: "console", value: "1" },
-  { key: "trace", value: "1" },
-  { key: "log", value: "1" },
-  { key: "verbose", value: "1" },
-  { key: "diagnostic", value: "1" },
-  { key: "mode", value: "debug" },
-  { key: "profiler", value: "1" },
-  { key: "debug_mode", value: "1" },
-  { key: "debuglevel", value: "1" },
-  { key: "error_reporting", value: "1" },
-  { key: "show_errors", value: "1" },
-  { key: "performance", value: "1" },
-  { key: "sandbox", value: "1" },
-  { key: "beta", value: "1" },
-  { key: "qa", value: "1" },
-  { key: "dev_mode", value: "1" },
-  { key: "validate", value: "1" },
   { key: "analysis", value: "1" },
-  { key: "experiment", value: "1" },
-  { key: "test_mode", value: "1" },
+  { key: "beta", value: "1" },
+  { key: "console", value: "1" },
+  { key: "debug", value: "1" },
   { key: "debug_flag", value: "1" },
-  { key: "development", value: "1" },
-  { key: "debuginfo", value: "1" },
-  { key: "monitoring", value: "1" },
-  { key: "internal", value: "1" },
-  { key: "debug_status", value: "1" },
+  { key: "debug_mode", value: "1" },
   { key: "debug_output", value: "1" },
+  { key: "debug_status", value: "1" },
+  { key: "debuginfo", value: "1" },
+  { key: "debuglevel", value: "1" },
+  { key: "dev", value: "1" },
+  { key: "dev_mode", value: "1" },
+  { key: "development", value: "1" },
+  { key: "diagnostic", value: "1" },
+  { key: "env", value: "pre" },
+  { key: "error_reporting", value: "1" },
+  { key: "experiment", value: "1" },
+  { key: "internal", value: "1" },
+  { key: "log", value: "1" },
+  { key: "mode", value: "debug" },
+  { key: "monitoring", value: "1" },
+  { key: "performance", value: "1" },
+  { key: "profiler", value: "1" },
+  { key: "qa", value: "1" },
+  { key: "sandbox", value: "1" },
+  { key: "show_errors", value: "1" },
+  { key: "staging", value: "1" },
+  { key: "test", value: "1" },
+  { key: "test_mode", value: "1" },
   { key: "testing", value: "1" },
+  { key: "trace", value: "1" },
+  { key: "validate", value: "1" },
+  { key: "verbose", value: "1" },
 ];
 
 // Counter for the number of modified URLs
@@ -93,97 +93,76 @@ function clearModifiedUrls() {
 window.getModifiedUrls = getModifiedUrls;
 window.clearModifiedUrls = clearModifiedUrls;
 
+// Preprocess Text from responses
+function preprocessText(text) {
+  return text.replace(/\s+/g, '');
+}
+
 // Function to check if two responses are meaningfully different
 function isDifferentResponse(originalText, modifiedText) {
-  // Calculate the similarity between the two responses
-  const similarity = stringSimilarity.compareTwoStrings(originalText, modifiedText);
+  // Preprocess the texts before comparison
+  const preprocessedOriginalText = preprocessText(originalText);
+  const preprocessedModifiedText = preprocessText(modifiedText);
+
+  // Calculate the similarity between the two preprocessed responses
+  const similarity = stringSimilarity.compareTwoStrings(
+    preprocessedOriginalText,
+    preprocessedModifiedText
+  );
 
   // Set a threshold for similarity; responses with similarity below this threshold are considered different
-  const similarityThreshold = 0.90;
+  const similarityThreshold = 0.93;
 
   // Return true if the similarity is below the threshold
   return similarity < similarityThreshold;
 }
 
-// Function to fetch URL and compare responses with and without each parameter
-async function checkUrlWithParameters(url, parameters) {
-  const originalResponse = await fetch(url);
-  const originalText = await originalResponse.text();
-
-  // Check the response with all parameters combined
-  const combinedUrl = parameters.reduce((currentUrl, param) => {
-    return appendQueryParam(currentUrl, param);
-  }, url);
-  const combinedResponse = await fetch(combinedUrl);
-  const combinedText = await combinedResponse.text();
-
-  if (!isDifferentResponse(originalText, combinedText)) {
-    // If the response is the same, there is no need to perform the binary search
+// Perform the binary search
+async function binarySearch(url, includedParams, searchParams, originalText) {
+  if (searchParams.length === 0) {
     return;
   }
 
-  // Define the start and end indices for the binary search
-  let startIndex = 0;
-  let endIndex = parameters.length - 1;
-
-  // Perform the binary search
-  while (startIndex <= endIndex) {
-    // Calculate the middle index
-    const middleIndex = Math.floor((startIndex + endIndex) / 2);
-
-    // Construct the modified URL using the parameters up to the middle index
-    const modifiedUrl = parameters.slice(0, middleIndex + 1).reduce((currentUrl, param) => {
-      return appendQueryParam(currentUrl, param);
-    }, url);
-
-    // Fetch the modified response and compare it to the original response
+  if (searchParams.length === 1) {
+    const modifiedUrl = appendQueryParam(url, searchParams[0]);
     const modifiedResponse = await fetch(modifiedUrl);
     const modifiedText = await modifiedResponse.text();
-
     if (isDifferentResponse(originalText, modifiedText)) {
-      // If the response is different, add the modified URL and search for more modifications
-      addModifiedUrl(modifiedUrl);
-      endIndex = middleIndex - 1;
-    } else {
-      // If the response is the same, continue searching in the upper half of the list
-      startIndex = middleIndex + 1;
-    }
-  }
-
-  // Check each parameter individually until the first parameter that modifies the response is found
-  let found = false;
-  for (const param of parameters) {
-    const modifiedUrl = appendQueryParam(url, param);
-    const modifiedResponse = await fetch(modifiedUrl);
-    const modifiedText = await modifiedResponse.text();
-
-    if (isDifferentResponse(originalText, modifiedText)) {
-      // If the response is different, add the modified URL to the set
-      addModifiedUrl(modifiedUrl);
-      found = true;
-      break;
-    }
-  }
-
-  // If there are only two parameters left and we have a modified response when using only one of them,
-  // try the other parameter
-  if (!found && parameters.length === 2) {
-    const modifiedUrl = appendQueryParam(url, parameters[0]);
-    const modifiedResponse = await fetch(modifiedUrl);
-    const modifiedText = await modifiedResponse.text();
-
-    if (!isDifferentResponse(originalText, modifiedText)) {
-      const otherModifiedUrl = appendQueryParam(url, parameters[1]);
-      const otherModifiedResponse = await fetch(otherModifiedUrl);
-      const otherModifiedText = await otherModifiedResponse.text();
-
-      if (isDifferentResponse(originalText, otherModifiedText)) {
-        addModifiedUrl(otherModifiedUrl);
-      }
-    } else {
       addModifiedUrl(modifiedUrl);
     }
+    return;
   }
+
+  // Calculate the middle index
+  const middleIndex = Math.floor(searchParams.length / 2);
+
+  // Construct the modified URL using the includedParams and up to the middle index of searchParams
+  const modifiedUrl = includedParams.concat(searchParams.slice(0, middleIndex)).reduce((currentUrl, param) => {
+    return appendQueryParam(currentUrl, param);
+  }, url);
+
+  // Fetch the modified response and compare it to the original response
+  const modifiedResponse = await fetch(modifiedUrl);
+  const modifiedText = await modifiedResponse.text();
+
+  if (isDifferentResponse(originalText, modifiedText)) {
+    // If the response is different, add the modified URL and search for more modifications
+    addModifiedUrl(modifiedUrl);
+    await binarySearch(url, includedParams, searchParams.slice(0, middleIndex), originalText);
+  } else {
+    // If the response is the same, continue searching in the upper half of the list
+    await binarySearch(url, includedParams.concat(searchParams.slice(0, middleIndex)), searchParams.slice(middleIndex), originalText);
+  }
+}
+
+// Function to check URL with parameters
+async function checkUrlWithParameters(url, parameters) {
+  // Fetch the original response only once
+  const originalResponse = await fetch(url);
+  const originalText = await originalResponse.text();
+
+  // Perform the binary search with the full list of parameters and the original response text
+  await binarySearch(url, [], parameters, originalText);
 }
 
 // Listen for tab updates to perform background checks

@@ -6,12 +6,14 @@
 
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/devploit/dontgo403/issues)
 
-Discover hidden debugging parameters and uncover web application secrets with debugHunter. This Chrome extension scans websites for debugging parameters and notifies you when it finds a URL with modified responses.
+Discover hidden debugging parameters and uncover web application secrets with debugHunter. This Chrome extension scans websites for debugging parameters and notifies you when it finds a URL with modified responses. The extension utilizes a binary search algorithm to efficiently determine the parameter responsible for the change in the response.
 
 ## Features
 
-- Automatically detects URLs with modified responses due to debugging parameters
-- Displays a list of URLs with modified responses for easy access
+- Perform a binary search on a list of predefined query parameters.
+- Compare responses with and without query parameters to identify changes.
+- Track and display the number of modified URLs in the browser action badge.
+- Allow the user to view and clear the list of modified URLs.
 
 ## Installation
 
@@ -36,7 +38,7 @@ Discover hidden debugging parameters and uncover web application secrets with de
 
 ## Usage
 
-It is recommended to pin the extension to the toolbar to check if a new URL debug parameter is found.
+It is recommended to pin the extension to the toolbar to check if a new modified URL by debug parameter is found.
 1. Navigate to any website.
 2. Click on the debugHunter extension icon in the Chrome toolbar.
 3. If the extension detects any URLs with modified responses due to debugging parameters, they will be listed in the popup.
