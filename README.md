@@ -50,7 +50,7 @@ It is recommended to pin the extension to the toolbar to check if a new modified
 To modify the similarity threshold using the options page of the extension, follow these steps:
 1. Click on the debugHunter extension icon in the Chrome toolbar.
 2. Click on the gear icon in the top right corner of the popup to open the options page.
-3. In the options page, use the slider to set the similarity threshold to the desired value (default 0.97)
+3. In the options page, use the slider to set the similarity threshold to the desired value (default 0.97).
 
 ## Contributing
 
