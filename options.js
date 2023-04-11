@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
     // Load the saved similarity threshold value
     chrome.storage.sync.get('similarityThreshold', (data) => {
-      const value = data.similarityThreshold || 0.97;
+      const value = data.similarityThreshold || 0.92;
       similarityThresholdSlider.value = value;
       updateDisplayValue(value);
     });

@@ -130,7 +130,7 @@ async function binarySearch(url, includedParams, searchParams, originalText) {
       chrome.storage.sync.get('similarityThreshold', resolve);
     });
 
-    const similarityThreshold = storedSettings.similarityThreshold || 0.97;
+    const similarityThreshold = storedSettings.similarityThreshold || 0.92;
     
     if (isDifferentResponse(originalText, modifiedText, similarityThreshold)) {
       addModifiedUrl(modifiedUrl);
@@ -155,7 +155,7 @@ async function binarySearch(url, includedParams, searchParams, originalText) {
     chrome.storage.sync.get('similarityThreshold', resolve);
   });
 
-  const similarityThreshold = storedSettings.similarityThreshold || 0.97;
+  const similarityThreshold = storedSettings.similarityThreshold || 0.92;
 
   if (isDifferentResponse(originalText, modifiedText, similarityThreshold)) {
     // If the response is different, add the modified URL and search for more modifications
