@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css?family=Anonymous+Pro&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
         body {
-          font-family: "Anonymous Pro", monospace;
-          background-color: #585858;
+          font-family: "SFMono-Medium";
+          background-color: #888888;
           color: white;
           width: 500px;
           max-height: 2000px;
@@ -14,7 +14,7 @@
         }
     
         h2 {
-          font-size: 14px;
+          font-size: 12px;
           margin-bottom: 12px;
           margin-top: 50px;
         }
@@ -35,6 +35,7 @@
     
         li {
           background-color: #333;
+          font-size: 10px;
           margin-bottom: 5px;
           padding: 5px;
           border-radius: 3px;
@@ -42,14 +43,14 @@
     
         button {
           background-color: rgb(130, 0, 0);
-          font-family: "Anonymous Pro", monospace;
+          font-family: "SFMono-Medium";
           border: none;
           color: white;
           padding: 5px 10px;
           text-align: center;
           text-decoration: none;
           display: inline-block;
-          font-size: 12px;
+          font-size: 11px;
           margin: 5px 2px;
           cursor: pointer;
           border-radius: 2px;
@@ -80,7 +81,11 @@
   </head>
   <body>
     <div class="banner"><img src="images/banner.png" width="150" height="40" ></div>
-    <div class="info-container"><a href="#" id="info-icon">ℹ️</a></div>
+    <div class="info-container">
+      <a href="#" id="options-link"><i class="fa fa-cog"></i></a>
+      <a href="#" id="info-icon">ℹ</i>
+      </a>
+    </div>
     <div class="window">
     <h2>Modified Response URLs</h2>
     <ul id="modifiedUrls"></ul>

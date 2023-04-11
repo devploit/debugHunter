@@ -99,7 +99,7 @@ function preprocessText(text) {
 }
 
 // Function to check if two responses are meaningfully different
-function isDifferentResponse(originalText, modifiedText) {
+function isDifferentResponse(originalText, modifiedText, similarityThreshold) {
   // Preprocess the texts before comparison
   const preprocessedOriginalText = preprocessText(originalText);
   const preprocessedModifiedText = preprocessText(modifiedText);
@@ -109,9 +109,6 @@ function isDifferentResponse(originalText, modifiedText) {
     preprocessedOriginalText,
     preprocessedModifiedText
   );
-
-  // Set a threshold for similarity; responses with similarity below this threshold are considered different
-  const similarityThreshold = 0.90;
 
   // Return true if the similarity is below the threshold
   return similarity < similarityThreshold;
@@ -127,7 +124,15 @@ async function binarySearch(url, includedParams, searchParams, originalText) {
     const modifiedUrl = appendQueryParam(url, searchParams[0]);
     const modifiedResponse = await fetch(modifiedUrl);
     const modifiedText = await modifiedResponse.text();
-    if (isDifferentResponse(originalText, modifiedText)) {
+
+    // Load similarityThreshold from storage
+    const storedSettings = await new Promise(resolve => {
+      chrome.storage.sync.get('similarityThreshold', resolve);
+    });
+
+    const similarityThreshold = storedSettings.similarityThreshold || 0.97;
+    
+    if (isDifferentResponse(originalText, modifiedText, similarityThreshold)) {
       addModifiedUrl(modifiedUrl);
     }
     return;
@@ -145,7 +150,14 @@ async function binarySearch(url, includedParams, searchParams, originalText) {
   const modifiedResponse = await fetch(modifiedUrl);
   const modifiedText = await modifiedResponse.text();
 
-  if (isDifferentResponse(originalText, modifiedText)) {
+  // Load similarityThreshold from storage
+  const storedSettings = await new Promise(resolve => {
+    chrome.storage.sync.get('similarityThreshold', resolve);
+  });
+
+  const similarityThreshold = storedSettings.similarityThreshold || 0.97;
+
+  if (isDifferentResponse(originalText, modifiedText, similarityThreshold)) {
     // If the response is different, add the modified URL and search for more modifications
     addModifiedUrl(modifiedUrl);
     await binarySearch(url, includedParams, searchParams.slice(0, middleIndex), originalText);

@@ -27,3 +27,7 @@ document.getElementById("clearUrls").addEventListener("click", () => {
 document.getElementById('info-icon').addEventListener('click', () => {
   chrome.tabs.create({ url: 'https://github.com/devploit/debugHunter' });
 });
+
+document.getElementById('options-link').addEventListener('click', () => {
+  chrome.runtime.openOptionsPage();
+});

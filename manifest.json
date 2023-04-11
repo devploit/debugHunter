@@ -1,14 +1,16 @@
 {
   "manifest_version": 2,
   "name": "debugHunter",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Discover hidden debugging parameters and uncover web application secrets",
+  "options_page": "options.html",
   "icons": {
     "48": "images/icon.png"
   },
   "permissions": [
     "webRequest",
     "webRequestBlocking",
+    "storage",
     "<all_urls>"
   ],
   "background": {
