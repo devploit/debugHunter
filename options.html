@@ -10,7 +10,7 @@
       margin: 30px;
       max-width: 600px;
       color: white;
-      background-color: #888888;
+      background-color: #242A41;
     }
 
     h1 {
@@ -36,16 +36,70 @@
       font-weight: 300;
       margin-top: 5px;
     }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      background-color: #333;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    form {
+      margin-top: 20px;
+    }
+    form input {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      width: 70%;
+    }
+    form button {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      background-color: #337ab7;
+      color: white;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+    form button:hover {
+      background-color: #286090;
+    }
+    button.remove {
+      background-color: #d9534f;
+      cursor: pointer;
+    }
+    button.remove {
+      background-color: #d9534f;
+      cursor: pointer;
+      border-radius: 8px; /* new line */
+    }
   </style>
   <title>Options</title>
 </head>
 <body>
   <h1>Options</h1>
   <label for="similarityThreshold">Similarity Threshold</label>
-  <input type="range" id="similarityThreshold" name="similarityThreshold" min="0" max="1" step="0.01" value="0.92">
-  <p>Current value: <span id="similarityThresholdValue">0.92</span></p>
-  <br><br><p>The similarity threshold determines the minimum similarity score required for a pair of URLs to be considered the same. The value ranges from 0 to 1, where 0 means that any pair of URLs is considered the same, and 1 means that only identical URLs are considered the same. The closer the value is to 1, the more similar the URLs need to be to be considered the same.</p>
-  <p><b>Default value is: 0.92</b></p>
+  <input type="range" id="similarityThreshold" name="similarityThreshold" min="0" max="1" step="0.01" value="0.95">
+  <p>Current value: <span id="similarityThresholdValue">0.95</span></p>
+  <br><p>The similarity threshold determines the minimum similarity score required for a pair of URLs to be considered the same. The value ranges from 0 to 1, where 0 means that any pair of URLs is considered the same, and 1 means that only identical URLs are considered the same. The closer the value is to 1, the more similar the URLs need to be to be considered the same.</p>
+  <p><b>Default value is: 0.95</b></p>
+  <br><br><label for="checkInterval">Check Internal (minutes)</label>
+  <input type="range" id="checkInterval" name="checkInterval" min="1" max="5000" step="1" value="480">
+  <p>Current value: <span id="checkIntervalValue">480</span></p>
+  <br><br><p>Check Interval determines the frequency at which the extension checks for changes on the websites you visit. It is expressed in minutes, with a minimum of 1 minute and a maximum of 5000 minutes. Adjusting the slider will immediately save the new interval to your settings. Note: Lower intervals may impact performance.</b></p>
+  <p><b>Default value is: 480 minutes (8 hours)</b></p>
+  <br><br><label for="whitelist">Whitelisted Domains</label>
+  <ul id="whitelistDisplay"></ul>
+  <form id="addWhitelistForm">
+    <input type="text" id="newWhitelistDomain" placeholder="Enter new domain">
+    <button type="submit">Add to Whitelist</button>
+  </form>
   <script src="options.js"></script>
 </body>
 </html>

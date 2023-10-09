@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "debugHunter",
-  "version": "1.0.3",
-  "description": "Discover hidden debugging parameters and uncover web application secrets",
+  "version": "1.1.1",
+  "description": "Discover hidden debugging parameters/headers and uncover web application secrets",
   "options_page": "options.html",
   "icons": {
     "48": "images/icon.png"
@@ -11,10 +11,11 @@
     "webRequest",
     "webRequestBlocking",
     "storage",
-    "<all_urls>"
+    "<all_urls>",
+    "tabs"
   ],
   "background": {
-    "scripts": ["similarity.min.js", "background.js"],
+    "scripts": ["similarity.min.js", "debugHunter.js"],
     "persistent": true
   },
   "browser_action": {

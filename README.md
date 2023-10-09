@@ -1,19 +1,22 @@
-# debugHunter - Chrome Extension
+# debugHunterPro - Chrome Extension
 
 <p align="center">
-<img src="https://i.imgur.com/QEUUM9w.png" width="600" height="150" >
+<img src="https://i.imgur.com/BknNTJs.png" width="600" height="150" >
 </p>
 
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/devploit/dontgo403/issues)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/devploit/debugHunter/issues/)
 
 Discover hidden debugging parameters and uncover web application secrets with debugHunter. This Chrome extension scans websites for debugging parameters and notifies you when it finds a URL with modified responses. The extension utilizes a binary search algorithm to efficiently determine the parameter responsible for the change in the response.
 
 ## Features
 
-- Perform a binary search on a list of predefined query parameters.
 - Compare responses with and without query parameters to identify changes.
+- Compare responses with and without custom headers to identify changes.
+- Check for sensitive paths.
+- Avoid dynamic URLs and it's false positives.
+- Avoid soft 404 URLs.
 - Track and display the number of modified URLs in the browser action badge.
-- Allow the user to view and clear the list of modified URLs.
+- Allow the user to view and clear the list of found URLs.
 
 ## Installation
 
@@ -50,7 +53,7 @@ It is recommended to pin the extension to the toolbar to check if a new modified
 To modify the similarity threshold using the options page of the extension, follow these steps:
 1. Click on the debugHunter extension icon in the Chrome toolbar.
 2. Click on the gear icon in the top right corner of the popup to open the options page.
-3. In the options page, use the slider to set the similarity threshold to the desired value (default 0.92).
+3. In the options page, use the slider to set the similarity threshold to the desired value (default 0.95).
 
 ## Contributing
 
