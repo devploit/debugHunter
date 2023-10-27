@@ -1,4 +1,4 @@
-# debugHunterPro - Chrome Extension
+# debugHunter - Chrome Extension
 
 <p align="center">
 <img src="https://i.imgur.com/BknNTJs.png" width="600" height="150" >
