@@ -1,5 +1,5 @@
 /**
- * debugHunter v2.0.0 - Options Script
+ * debugHunter v2.0.1 - Options Script
  * Advanced settings management
  */
 

@@ -1,5 +1,5 @@
 /**
- * debugHunter v2.0.0 - Background Service Worker
+ * debugHunter v2.0.1 - Background Service Worker
  * Multi-factor detection with configurable comparison strategies
  */
 
@@ -180,6 +180,7 @@ const debugHeaders = [
 
 async function getSettings() {
   const result = await chrome.storage.sync.get([
+    'enabled',
     'detectionMode',
     'requireDebugIndicators',
     'detectStatusChanges',
@@ -195,6 +196,7 @@ async function getSettings() {
   ]);
 
   return {
+    enabled: result.enabled !== false, // Enabled by default
     detectionMode: result.detectionMode || 'smart',
     requireDebugIndicators: result.requireDebugIndicators !== false,
     detectStatusChanges: result.detectStatusChanges !== false,
@@ -882,14 +884,17 @@ async function checkPaths(url) {
 // ============================================================================
 
 async function scanUrl(url) {
+  const settings = await getSettings();
+
+  // Check if scanning is enabled globally
+  if (!settings.enabled) return;
+
   if (!await shouldScanUrl(url)) return;
 
   const domain = new URL(url).hostname;
   updateScanStatus({ active: true, domain });
 
   console.log(`%c[debugHunter] Scanning: ${url}`, 'background: #9b59b6; color: white; padding: 2px 6px; border-radius: 3px');
-
-  const settings = await getSettings();
 
   // Get baseline once for params and headers (saves 1 request)
   const baseline = await getUrlBaseline(url);
@@ -945,6 +950,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       case 'getScanStatus':
         sendResponse(scanStatus);
         break;
+      case 'getEnabled': {
+        const enabledSettings = await getSettings();
+        sendResponse({ enabled: enabledSettings.enabled });
+        break;
+      }
+      case 'setEnabled': {
+        await chrome.storage.sync.set({ enabled: message.enabled });
+        // Update badge to reflect state
+        if (!message.enabled) {
+          chrome.action.setBadgeText({ text: 'OFF' });
+          chrome.action.setBadgeBackgroundColor({ color: '#6e7681' });
+        } else {
+          const currentFindings = await getFindings();
+          updateBadge(currentFindings);
+        }
+        sendResponse({ enabled: message.enabled });
+        break;
+      }
       default:
         sendResponse({ error: 'Unknown action' });
     }
@@ -953,13 +976,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.runtime.onInstalled.addListener(async () => {
-  const findings = await getFindings();
-  updateBadge(findings);
+  const settings = await getSettings();
+  if (!settings.enabled) {
+    chrome.action.setBadgeText({ text: 'OFF' });
+    chrome.action.setBadgeBackgroundColor({ color: '#6e7681' });
+  } else {
+    const findings = await getFindings();
+    updateBadge(findings);
+  }
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  const findings = await getFindings();
-  updateBadge(findings);
+  const settings = await getSettings();
+  if (!settings.enabled) {
+    chrome.action.setBadgeText({ text: 'OFF' });
+    chrome.action.setBadgeBackgroundColor({ color: '#6e7681' });
+  } else {
+    const findings = await getFindings();
+    updateBadge(findings);
+  }
 });
 
-console.log('[debugHunter] Service worker v2.0.0 - Multi-factor detection');
+console.log('[debugHunter] Service worker v2.0.1 - Multi-factor detection');

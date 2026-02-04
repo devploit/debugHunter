@@ -1,5 +1,5 @@
 /**
- * debugHunter v2.0.0 - Popup Script
+ * debugHunter v2.0.1 - Popup Script
  * Features: Diff viewer, Severity stats, Scan status
  */
 
@@ -29,6 +29,14 @@ async function clearFindings(type = null) {
 
 async function getScanStatus() {
   return await sendMessage('getScanStatus');
+}
+
+async function getEnabled() {
+  return await sendMessage('getEnabled');
+}
+
+async function setEnabled(enabled) {
+  return await sendMessage('setEnabled', { enabled });
 }
 
 // ============================================================================
@@ -360,8 +368,18 @@ async function updateUI() {
 // EVENT HANDLERS
 // ============================================================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   updateUI();
+
+  // Initialize scan toggle state
+  const scanToggle = document.getElementById('scan-toggle');
+  const enabledState = await getEnabled();
+  scanToggle.checked = enabledState.enabled;
+
+  // Scan toggle handler
+  scanToggle.addEventListener('change', async (e) => {
+    await setEnabled(e.target.checked);
+  });
 
   // Category collapse toggle
   document.querySelectorAll('.category-header').forEach((header) => {
