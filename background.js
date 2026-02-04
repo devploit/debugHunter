@@ -1,5 +1,5 @@
 /**
- * debugHunter v2.0.3 - Background Service Worker
+ * debugHunter v2.0.4 - Background Service Worker
  * Multi-factor detection with configurable comparison strategies
  * - Added redirect detection to filter false positives on paths
  * - Added natural variance measurement to filter false positives on dynamic sites
@@ -710,13 +710,13 @@ async function checkParams(url, baseline = null) {
           measuredVariance
         );
 
-        // If flagged but needs variance verification (ambiguous signal)
+        // If flagged but needs variance verification (no debug indicators found)
         if (analysis.isDifferent && analysis.requiresVarianceCheck && !measuredVariance) {
           // Measure natural variance with a control request
           measuredVariance = await measureNaturalVariance(url, baseline.text, settings);
 
-          if (measuredVariance && measuredVariance.isHighlyDynamic) {
-            // Re-analyze with variance knowledge
+          if (measuredVariance) {
+            // Re-analyze with variance knowledge - always re-check, not just for highly dynamic sites
             analysis = await analyzeResponseDifference(
               baseline.mockResponse, modifiedResponse,
               baseline.text, modifiedText,
@@ -780,13 +780,13 @@ async function checkHeaders(url, baseline = null) {
           measuredVariance
         );
 
-        // If flagged but needs variance verification (ambiguous signal)
+        // If flagged but needs variance verification (no debug indicators found)
         if (analysis.isDifferent && analysis.requiresVarianceCheck && !measuredVariance) {
           // Measure natural variance with a control request
           measuredVariance = await measureNaturalVariance(url, baseline.text, settings);
 
-          if (measuredVariance && measuredVariance.isHighlyDynamic) {
-            // Re-analyze with variance knowledge
+          if (measuredVariance) {
+            // Re-analyze with variance knowledge - always re-check, not just for highly dynamic sites
             analysis = await analyzeResponseDifference(
               baseline.mockResponse, modifiedResponse,
               baseline.text, modifiedText,
