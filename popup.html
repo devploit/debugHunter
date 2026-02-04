@@ -109,6 +109,72 @@
         color: var(--critical);
       }
 
+      /* Toggle Switch */
+      .toggle-switch {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: 8px;
+        padding-right: 12px;
+        border-right: 1px solid var(--border-color);
+      }
+
+      .toggle-label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        font-weight: 500;
+      }
+
+      .toggle-container {
+        position: relative;
+        width: 36px;
+        height: 20px;
+      }
+
+      .toggle-input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--bg-hover);
+        border-radius: 10px;
+        transition: all 0.2s ease;
+      }
+
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: var(--text-muted);
+        border-radius: 50%;
+        transition: all 0.2s ease;
+      }
+
+      .toggle-input:checked + .toggle-slider {
+        background-color: var(--low);
+      }
+
+      .toggle-input:checked + .toggle-slider:before {
+        transform: translateX(16px);
+        background-color: white;
+      }
+
+      .toggle-input:focus + .toggle-slider {
+        box-shadow: 0 0 0 2px var(--accent);
+      }
+
       /* Status Bar */
       .status-bar {
         display: none;
@@ -584,9 +650,16 @@
           <i class="fas fa-bug"></i>
         </div>
         <span class="logo-text">debugHunter</span>
-        <span class="logo-version">v2.0</span>
+        <span class="logo-version">v2.0.1</span>
       </div>
       <div class="controls">
+        <div class="toggle-switch">
+          <span class="toggle-label">Scan</span>
+          <label class="toggle-container">
+            <input type="checkbox" class="toggle-input" id="scan-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
         <button class="control-btn" id="options-link" title="Settings">
           <i class="fas fa-cog"></i>
         </button>
