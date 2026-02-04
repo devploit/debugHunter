@@ -1,8 +1,9 @@
 /**
- * debugHunter v2.0.2 - Background Service Worker
+ * debugHunter v2.0.3 - Background Service Worker
  * Multi-factor detection with configurable comparison strategies
  * - Added redirect detection to filter false positives on paths
  * - Added natural variance measurement to filter false positives on dynamic sites
+ * - Require variance check for all detections without debug indicators
  */
 
 import { stringSimilarity } from './similarity.js';
@@ -409,11 +410,12 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
   if (similarity < effectiveSimilarityThreshold) {
     result.reasons.push(`Similarity: ${(similarity * 100).toFixed(1)}%`);
     result.confidence += (1 - similarity) * 30;
+  }
 
-    // If flagging based on similarity alone (no debug indicators), mark for variance verification
-    if (!naturalVariance && !debugCheck.found) {
-      result.requiresVarianceCheck = true;
-    }
+  // If we have confidence but NO debug indicators, always verify with variance check
+  // This prevents false positives on dynamic sites (login pages, news sites, etc.)
+  if (!naturalVariance && !debugCheck.found && result.confidence > 0) {
+    result.requiresVarianceCheck = true;
   }
 
   // Determine if response is different based on mode
