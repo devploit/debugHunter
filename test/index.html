@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>debugHunter Test Page</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #f0f6fc;
+      min-height: 100vh;
+      padding: 40px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { color: #a371f7; margin-bottom: 10px; }
+    .subtitle { color: #8b949e; margin-bottom: 30px; }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card h2 { color: #58a6ff; font-size: 16px; margin-bottom: 15px; }
+    .status { padding: 10px 15px; border-radius: 6px; margin-bottom: 10px; font-family: monospace; font-size: 13px; }
+    .status.normal { background: #238636; }
+    .status.debug { background: #f85149; }
+    .status.warning { background: #d29922; }
+    pre {
+      background: #0d1117;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      color: #8b949e;
+    }
+    .detected { color: #f85149; font-weight: bold; }
+    .param-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .param-tag {
+      background: #30363d;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    .param-tag.active { background: #f85149; color: white; }
+    .test-links { margin-top: 20px; }
+    .test-links a {
+      display: inline-block;
+      background: #238636;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .test-links a:hover { background: #2ea043; }
+    .test-links a.danger { background: #f85149; }
+    .test-links a.danger:hover { background: #da3633; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>debugHunter Test Page</h1>
+    <p class="subtitle">This page simulates debug parameter and header detection</p>
+
+    <div class="card">
+      <h2>Current Request Status</h2>
+      <div id="status" class="status normal">Normal Mode - No debug parameters detected</div>
+      <pre id="info"></pre>
+    </div>
+
+    <div class="card">
+      <h2>Detected Parameters</h2>
+      <div id="params-detected"></div>
+      <div class="param-list" id="param-list"></div>
+    </div>
+
+    <div class="card">
+      <h2>Detected Headers</h2>
+      <div id="headers-detected"></div>
+    </div>
+
+    <div class="card">
+      <h2>Debug Output (only shown when debug is active)</h2>
+      <pre id="debug-output"></pre>
+    </div>
+
+    <div class="card">
+      <h2>Test Links</h2>
+      <p style="color: #8b949e; margin-bottom: 15px; font-size: 13px;">
+        Click these links to test debugHunter detection:
+      </p>
+      <div class="test-links">
+        <a href="?debug=1">?debug=1</a>
+        <a href="?_debug=1">?_debug=1</a>
+        <a href="?debug=true">?debug=true</a>
+        <a href="?XDEBUG_SESSION_START=phpstorm">?XDEBUG_SESSION_START</a>
+        <a href="?env=dev">?env=dev</a>
+        <a href="?env=staging">?env=staging</a>
+        <a href="?verbose=1">?verbose=1</a>
+        <a href="?admin=1">?admin=1</a>
+        <a href="?test=1" class="danger">?test=1</a>
+        <a href="?" class="danger">Clear params</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sensitive Paths (for path detection)</h2>
+      <p style="color: #8b949e; margin-bottom: 15px; font-size: 13px;">
+        These paths exist on this test server:
+      </p>
+      <div class="test-links">
+        <a href="/.env">/.env</a>
+        <a href="/.git/config">/.git/config</a>
+        <a href="/config.json">/config.json</a>
+        <a href="/phpinfo.php">/phpinfo.php</a>
+        <a href="/debug">/debug</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Debug parameters to detect
+    const debugParams = [
+      '_debug', 'debug', 'debug_mode', 'XDEBUG_SESSION_START', 'XDEBUG_SESSION',
+      'debugbar', 'profiler', 'trace', 'verbose', 'show_errors', 'display_errors',
+      'dev_mode', 'phpinfo', 'error_reporting', 'env', 'environment', 'staging',
+      'beta', 'internal', 'test', 'admin'
+    ];
+
+    // Check URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const detectedParams = [];
+
+    debugParams.forEach(param => {
+      if (urlParams.has(param)) {
+        detectedParams.push({ key: param, value: urlParams.get(param) });
+      }
+    });
+
+    const isDebugMode = detectedParams.length > 0;
+
+    // Update status
+    const statusEl = document.getElementById('status');
+    const infoEl = document.getElementById('info');
+    const paramsDetectedEl = document.getElementById('params-detected');
+    const paramListEl = document.getElementById('param-list');
+    const debugOutputEl = document.getElementById('debug-output');
+    const headersDetectedEl = document.getElementById('headers-detected');
+
+    if (isDebugMode) {
+      statusEl.className = 'status debug';
+      statusEl.textContent = 'DEBUG MODE ACTIVE - Sensitive information exposed!';
+
+      // Show detected params
+      paramsDetectedEl.innerHTML = '<span class="detected">Debug parameters detected!</span>';
+      detectedParams.forEach(p => {
+        const tag = document.createElement('span');
+        tag.className = 'param-tag active';
+        tag.textContent = `${p.key}=${p.value}`;
+        paramListEl.appendChild(tag);
+      });
+
+      // Show fake debug output (this is what debugHunter should detect)
+      debugOutputEl.innerHTML = `
+<span style="color: #f85149">═══════════════════════════════════════════════════════════════</span>
+<span style="color: #f85149">                    DEBUG MODE - INTERNAL DATA                   </span>
+<span style="color: #f85149">═══════════════════════════════════════════════════════════════</span>
+
+<span style="color: #58a6ff">[Environment Variables]</span>
+DB_HOST=localhost
+DB_NAME=production_db
+<span style="color: #f85149">DB_PASSWORD=super_secret_password_123!</span>
+<span style="color: #f85149">API_KEY=sk-1234567890abcdef1234567890abcdef</span>
+<span style="color: #f85149">AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY</span>
+
+<span style="color: #58a6ff">[Server Info]</span>
+PHP Version: 8.2.0
+Server: Apache/2.4.52
+Document Root: /var/www/html
+Current User: www-data
+
+<span style="color: #58a6ff">[Stack Trace]</span>
+#0 /var/www/html/index.php(42): DatabaseConnection->connect()
+#1 /var/www/html/lib/core.php(128): Application->init()
+#2 /var/www/html/lib/bootstrap.php(15): require_once()
+
+<span style="color: #58a6ff">[Request Headers]</span>
+${Object.entries({
+  'User-Agent': navigator.userAgent,
+  'Referer': document.referrer || 'none',
+  'Host': window.location.host,
+}).map(([k, v]) => `${k}: ${v}`).join('\n')}
+
+<span style="color: #3fb950">[Session Data]</span>
+user_id: 12345
+role: admin
+last_login: ${new Date().toISOString()}
+`;
+    } else {
+      statusEl.className = 'status normal';
+      statusEl.textContent = 'Normal Mode - Production environment';
+      paramsDetectedEl.innerHTML = '<span style="color: #3fb950">No debug parameters detected</span>';
+      debugOutputEl.innerHTML = '<span style="color: #8b949e">Debug output hidden in production mode</span>';
+
+      // Show available params
+      debugParams.slice(0, 10).forEach(param => {
+        const tag = document.createElement('span');
+        tag.className = 'param-tag';
+        tag.textContent = param;
+        paramListEl.appendChild(tag);
+      });
+    }
+
+    // Show request info
+    infoEl.innerHTML = `URL: ${window.location.href}
+Query String: ${window.location.search || '(none)'}
+Timestamp: ${new Date().toISOString()}
+Debug Mode: ${isDebugMode ? 'ACTIVE' : 'inactive'}`;
+
+    // Note about headers (can't detect client-side, but explain)
+    headersDetectedEl.innerHTML = `
+<p style="color: #8b949e; font-size: 13px;">
+  Header detection works server-side. debugHunter will test these headers:
+</p>
+<div class="param-list" style="margin-top: 10px;">
+  <span class="param-tag">X-Debug: 1</span>
+  <span class="param-tag">X-Forwarded-Host: localhost</span>
+  <span class="param-tag">X-Forwarded-For: 127.0.0.1</span>
+  <span class="param-tag">X-Original-URL: /admin</span>
+  <span class="param-tag">X-Env: dev</span>
+</div>
+`;
+  </script>
+</body>
+</html>

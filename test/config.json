@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "Internal Application",
+    "version": "2.5.3",
+    "environment": "production",
+    "debug": true
+  },
+  "database": {
+    "host": "db.internal.company.com",
+    "port": 3306,
+    "name": "prod_database",
+    "user": "app_user",
+    "password": "database_password_123!"
+  },
+  "api": {
+    "key": "api_key_1234567890abcdef",
+    "secret": "api_secret_key_do_not_expose",
+    "endpoint": "https://api.internal.company.com"
+  },
+  "redis": {
+    "host": "redis.internal.company.com",
+    "port": 6379,
+    "password": "redis_pass_123"
+  },
+  "aws": {
+    "region": "us-east-1",
+    "access_key": "AKIAIOSFODNN7EXAMPLE",
+    "secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  }
+}

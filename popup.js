@@ -1,156 +1,431 @@
-// QUERY PARAMS
+/**
+ * debugHunter v2.0.0 - Popup Script
+ * Features: Diff viewer, Severity stats, Scan status
+ */
 
-// This function populates the modified URLs list in the popup
-function updateModifiedUrlsList() {
-  const modifiedUrls = chrome.extension.getBackgroundPage().getModifiedUrls();
-  const list = document.getElementById("queryParams");
+// ============================================================================
+// MESSAGING
+// ============================================================================
 
-  list.innerHTML = "";
+async function sendMessage(action, data = {}) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ action, ...data }, (response) => {
+      resolve(response || { params: [], headers: [], paths: [] });
+    });
+  });
+}
 
-  // Iterate over each modified URL
-  for (const url of modifiedUrls) {
-    // Create a new list item
-    const listItem = document.createElement("li");
-    listItem.style.position = "relative";
+async function getFindings() {
+  return await sendMessage('getFindings');
+}
 
-    // Create a new anchor tag
-    const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
+async function removeFinding(type, identifier) {
+  return await sendMessage('removeFinding', { type, identifier });
+}
 
-    // Trim the displayed URL if it is too long
-    if (url.length > 60) {
-      link.textContent = url.substring(0, 57) + "...";
+async function clearFindings(type = null) {
+  return await sendMessage(type ? 'clearFindings' : 'clearAll', { type });
+}
+
+async function getScanStatus() {
+  return await sendMessage('getScanStatus');
+}
+
+// ============================================================================
+// SEVERITY STATS
+// ============================================================================
+
+function updateSeverityStats(findings) {
+  const allFindings = [
+    ...(findings.params || []),
+    ...(findings.headers || []),
+    ...(findings.paths || [])
+  ];
+
+  const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+
+  allFindings.forEach(f => {
+    if (f.severity && counts.hasOwnProperty(f.severity)) {
+      counts[f.severity]++;
+    }
+  });
+
+  document.getElementById('stat-critical').textContent = counts.critical;
+  document.getElementById('stat-high').textContent = counts.high;
+  document.getElementById('stat-medium').textContent = counts.medium;
+  document.getElementById('stat-low').textContent = counts.low;
+}
+
+// ============================================================================
+// SCAN STATUS
+// ============================================================================
+
+function updateScanStatusUI(status) {
+  const statusBar = document.getElementById('status-bar');
+  const statusDomain = document.getElementById('status-domain');
+
+  if (status && status.active) {
+    statusBar.classList.add('active');
+    statusDomain.textContent = status.domain || 'unknown';
+  } else {
+    statusBar.classList.remove('active');
+  }
+}
+
+// Listen for scan status updates
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.action === 'scanStatus') {
+    updateScanStatusUI(message.status);
+  }
+});
+
+// ============================================================================
+// SEARCH / FILTER
+// ============================================================================
+
+let currentSearchTerm = '';
+
+function filterFindings(searchTerm) {
+  currentSearchTerm = searchTerm.toLowerCase().trim();
+  const clearBtn = document.getElementById('search-clear');
+  const resultsInfo = document.getElementById('search-results-info');
+  const searchCount = document.getElementById('search-count');
+
+  // Show/hide clear button
+  clearBtn.classList.toggle('visible', currentSearchTerm.length > 0);
+
+  // Get all finding items
+  const allItems = document.querySelectorAll('.finding-item');
+  let visibleCount = 0;
+
+  allItems.forEach(item => {
+    if (!currentSearchTerm) {
+      item.classList.remove('hidden');
+      visibleCount++;
     } else {
-      link.textContent = url;
+      // Search in URL, path, header, param, and other data attributes
+      const url = item.querySelector('.finding-url');
+      const meta = item.querySelector('.finding-meta');
+      const searchText = [
+        url?.textContent || '',
+        url?.title || '',
+        meta?.textContent || ''
+      ].join(' ').toLowerCase();
+
+      const matches = searchText.includes(currentSearchTerm);
+      item.classList.toggle('hidden', !matches);
+      if (matches) visibleCount++;
     }
+  });
 
-    listItem.appendChild(link);
+  // Show results info
+  if (currentSearchTerm) {
+    resultsInfo.classList.add('visible');
+    searchCount.textContent = visibleCount;
+  } else {
+    resultsInfo.classList.remove('visible');
+  }
 
-    // Create the remove icon
-    const removeIcon = document.createElement('i');
-    removeIcon.className = "fa fa-times";
-    removeIcon.style.position = "absolute";
-    removeIcon.style.right = "10px";
-    removeIcon.style.top = "50%";
-    removeIcon.style.transform = "translateY(-50%)";
-    removeIcon.style.cursor = "pointer";
-    removeIcon.onclick = function() {
-      // Remove the URL from the modified URLs list in the background page
-      chrome.extension.getBackgroundPage().removeModifiedUrl(url);
-      updateModifiedUrlsList();
+  // Update category counts to show filtered counts
+  ['paths', 'headers', 'params'].forEach(type => {
+    const list = document.getElementById(`${type}-list`);
+    if (list) {
+      const visibleInCategory = list.querySelectorAll('.finding-item:not(.hidden)').length;
+      const countEl = document.getElementById(`${type}-count`);
+      if (countEl && currentSearchTerm) {
+        countEl.textContent = visibleInCategory;
+      }
     }
-    // Add the remove icon to the list item
-    listItem.appendChild(removeIcon);
+  });
+}
 
-    // Add the list item to the list
-    list.appendChild(listItem);
+function clearSearch() {
+  const searchInput = document.getElementById('search-input');
+  searchInput.value = '';
+  filterFindings('');
+  updateUI(); // Restore original counts
+}
+
+// ============================================================================
+// DIFF VIEWER
+// ============================================================================
+
+let currentDiffData = null;
+
+function showDiffModal(finding, type) {
+  const modal = document.getElementById('diff-modal');
+  const title = document.getElementById('modal-title');
+  const originalContent = document.getElementById('diff-original');
+  const modifiedContent = document.getElementById('diff-modified');
+
+  currentDiffData = finding;
+
+  // Set title based on type
+  if (type === 'paths') {
+    title.textContent = `Content: ${finding.path}`;
+  } else if (type === 'headers') {
+    title.textContent = `Diff: ${finding.header}`;
+  } else {
+    title.textContent = `Diff: ${finding.param}`;
+  }
+
+  // Set content (paths don't have originalResponse since they're different URLs)
+  if (type === 'paths') {
+    originalContent.textContent = '(Sensitive path found - no comparison needed)';
+    modifiedContent.textContent = finding.modifiedResponse || 'No response stored';
+  } else {
+    originalContent.textContent = finding.originalResponse || 'No original response stored';
+    modifiedContent.textContent = finding.modifiedResponse || 'No modified response stored';
+  }
+
+  modal.classList.add('active');
+}
+
+function hideDiffModal() {
+  const modal = document.getElementById('diff-modal');
+  modal.classList.remove('active');
+  currentDiffData = null;
+}
+
+// ============================================================================
+// UI RENDERING
+// ============================================================================
+
+function truncateUrl(url, maxLength = 55) {
+  if (!url) return '';
+  if (url.length <= maxLength) return url;
+  return url.substring(0, maxLength - 3) + '...';
+}
+
+function createFindingItem(data, type, identifier) {
+  const item = document.createElement('div');
+  item.className = 'finding-item';
+
+  // Severity bar
+  const severityBar = document.createElement('div');
+  severityBar.className = `finding-severity ${data.severity || 'medium'}`;
+  item.appendChild(severityBar);
+
+  // Content
+  const content = document.createElement('div');
+  content.className = 'finding-content';
+
+  // URL link
+  const urlLink = document.createElement('a');
+  urlLink.className = 'finding-url';
+  urlLink.target = '_blank';
+
+  if (type === 'paths') {
+    urlLink.href = data.path;
+    urlLink.textContent = truncateUrl(data.path);
+    urlLink.title = data.path;
+  } else if (type === 'headers') {
+    urlLink.href = data.url;
+    urlLink.textContent = truncateUrl(`${data.url}`);
+    urlLink.title = `${data.url}\nHeader: ${data.header}`;
+  } else {
+    urlLink.href = data.url;
+    urlLink.textContent = truncateUrl(data.url);
+    urlLink.title = `${data.url}\nParam: ${data.param}`;
+  }
+
+  content.appendChild(urlLink);
+
+  // Meta info
+  const meta = document.createElement('div');
+  meta.className = 'finding-meta';
+
+  // Severity tag
+  if (data.severity) {
+    const severityTag = document.createElement('span');
+    severityTag.className = `finding-tag ${data.severity}`;
+    severityTag.textContent = data.severity.toUpperCase();
+    meta.appendChild(severityTag);
+  }
+
+  // Additional info
+  const info = document.createElement('span');
+  info.className = 'finding-info';
+
+  if (type === 'params' && data.param) {
+    info.textContent = data.param;
+  } else if (type === 'headers' && data.header) {
+    info.textContent = data.header;
+  } else if (type === 'paths' && data.contentLength) {
+    info.textContent = `${data.contentLength} bytes`;
+  }
+
+  if (info.textContent) {
+    meta.appendChild(info);
+  }
+
+  content.appendChild(meta);
+  item.appendChild(content);
+
+  // Actions
+  const actions = document.createElement('div');
+  actions.className = 'finding-actions';
+
+  // View button (diff for params/headers, content for paths)
+  if (data.originalResponse || data.modifiedResponse) {
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'action-btn diff';
+    viewBtn.title = type === 'paths' ? 'View Content' : 'View Diff';
+    viewBtn.innerHTML = type === 'paths' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-columns"></i>';
+    viewBtn.onclick = (e) => {
+      e.stopPropagation();
+      showDiffModal(data, type);
+    };
+    actions.appendChild(viewBtn);
+  }
+
+  // Remove button
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'action-btn remove';
+  removeBtn.title = 'Remove';
+  removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+  removeBtn.onclick = async (e) => {
+    e.stopPropagation();
+    await removeFinding(type, identifier);
+    updateUI();
+  };
+  actions.appendChild(removeBtn);
+
+  item.appendChild(actions);
+
+  return item;
+}
+
+function updateCount(type, count) {
+  const countEl = document.getElementById(`${type}-count`);
+  if (countEl) {
+    countEl.textContent = count.toString();
+    countEl.classList.toggle('has-items', count > 0);
   }
 }
 
-// Call updateModifiedUrlsList when the popup is loaded
-document.addEventListener("DOMContentLoaded", updateModifiedUrlsList);
+function renderList(type, items) {
+  const list = document.getElementById(`${type}-list`);
+  if (!list) return;
 
-// CUSTOM HEADERS
-function updateCustomHeadersList() {
-  const foundCustomHeaders = chrome.extension.getBackgroundPage().getCustomHeaders();
-  const list = document.getElementById("customHeaders");
+  list.innerHTML = '';
 
-  list.innerHTML = "";
+  if (!items || items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = '<i class="fas fa-check-circle"></i>No findings yet';
+    list.appendChild(empty);
+    return;
+  }
 
-  for (const header of foundCustomHeaders) {
-    const listItem = document.createElement("li");
-    listItem.style.position = "relative";
-
-    const textNode = document.createTextNode(header);
-    listItem.appendChild(textNode);
-
-    const removeIcon = document.createElement('i');
-    removeIcon.className = "fa fa-times";
-    removeIcon.style.position = "absolute";
-    removeIcon.style.right = "10px";
-    removeIcon.style.top = "50%";
-    removeIcon.style.transform = "translateY(-50%)";
-    removeIcon.style.cursor = "pointer";
-    removeIcon.onclick = function() {
-      // Remove the URL from the modified URLs list in the background page
-      chrome.extension.getBackgroundPage().removeCustomHeader(header);
-      updateCustomHeadersList();
+  items.forEach((item) => {
+    let identifier;
+    if (type === 'paths') {
+      identifier = item.path;
+    } else if (type === 'headers') {
+      identifier = `${item.url}|${item.header}`;
+    } else {
+      identifier = item.url;
     }
-    // Add the remove icon to the list item
-    listItem.appendChild(removeIcon);
 
-    // Add the list item to the list
-    list.appendChild(listItem);
+    const itemEl = createFindingItem(item, type, identifier);
+    list.appendChild(itemEl);
+  });
+}
+
+async function updateUI() {
+  const findings = await getFindings();
+
+  renderList('paths', findings.paths || []);
+  renderList('headers', findings.headers || []);
+  renderList('params', findings.params || []);
+
+  updateCount('paths', (findings.paths || []).length);
+  updateCount('headers', (findings.headers || []).length);
+  updateCount('params', (findings.params || []).length);
+
+  updateSeverityStats(findings);
+
+  // Update scan status
+  const status = await getScanStatus();
+  updateScanStatusUI(status);
+
+  // Reapply search filter if active
+  if (currentSearchTerm) {
+    filterFindings(currentSearchTerm);
   }
 }
 
-// Call updateCustomHeadersList when the popup is loaded
-document.addEventListener("DOMContentLoaded", updateCustomHeadersList);
+// ============================================================================
+// EVENT HANDLERS
+// ============================================================================
 
-// SENSITIVE PATHS
-function updateSensitivePaths() {
-  const urlList = document.getElementById('sensitivePaths');
-  while (urlList.firstChild) {
-    urlList.firstChild.remove();
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  updateUI();
 
-  // Get updated found sensitive paths
-  const paths = chrome.extension.getBackgroundPage().getFoundSensitivePaths();
+  // Category collapse toggle
+  document.querySelectorAll('.category-header').forEach((header) => {
+    header.addEventListener('click', () => {
+      header.parentElement.classList.toggle('collapsed');
+    });
+  });
 
-  // Iterate over each found sensitive path
-  for (let path of paths) {
-    // Create a new list item
-    const listItem = document.createElement('li');
-    listItem.style.position = "relative";
+  // Options link
+  document.getElementById('options-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.runtime.openOptionsPage();
+  });
 
-    // Create a new anchor tag
-    const anchor = document.createElement('a');
-    anchor.href = path;
-    anchor.target = '_blank';
-    anchor.textContent = path;
-    listItem.appendChild(anchor);
+  // GitHub info link
+  document.getElementById('info-icon').addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: 'https://github.com/devploit/debugHunter' });
+  });
 
-    // Create the remove icon
-    const removeIcon = document.createElement('i');
-    removeIcon.className = "fa fa-times";
-    removeIcon.style.position = "absolute";
-    removeIcon.style.right = "10px";
-    removeIcon.style.top = "50%";
-    removeIcon.style.transform = "translateY(-50%)";
-    removeIcon.style.cursor = "pointer";
-    removeIcon.onclick = function() {
-      // Remove the path from the found sensitive paths list in the background page
-      chrome.extension.getBackgroundPage().removeSensitivePath(path);
-      updateSensitivePaths();
+  // Clear all button
+  document.getElementById('clear-all').addEventListener('click', async (e) => {
+    e.preventDefault();
+    await clearFindings();
+    updateUI();
+  });
+
+  // Modal close button
+  document.getElementById('modal-close').addEventListener('click', hideDiffModal);
+
+  // Close modal on overlay click
+  document.getElementById('diff-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'diff-modal') {
+      hideDiffModal();
     }
-    // Add the remove icon to the list item
-    listItem.appendChild(removeIcon);
+  });
 
-    // Add the list item to the list
-    urlList.appendChild(listItem);
-  }
-}
+  // Close modal on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hideDiffModal();
+    }
+  });
 
-// Call updateSensitivePaths when the popup is loaded
-document.addEventListener("DOMContentLoaded", updateSensitivePaths);
+  // Search functionality
+  const searchInput = document.getElementById('search-input');
+  const searchClear = document.getElementById('search-clear');
 
-// Get the current options from storage
-document.getElementById('info-icon').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://github.com/devploit/debugHunterPro' });
+  searchInput.addEventListener('input', (e) => {
+    filterFindings(e.target.value);
+  });
+
+  searchClear.addEventListener('click', () => {
+    clearSearch();
+  });
+
+  // Clear search on Escape when focused
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      clearSearch();
+      searchInput.blur();
+    }
+  });
 });
 
-// Open the options page when the options link is clicked
-document.getElementById('options-link').addEventListener('click', () => {
-  chrome.runtime.openOptionsPage();
-});
-
-// Clear all found sensitive paths, custom headers, and modified URLs
-document.getElementById('clear-all').addEventListener('click', () => {
-  chrome.extension.getBackgroundPage().clearFoundSensitivePaths();
-  updateSensitivePaths();
-  chrome.extension.getBackgroundPage().clearCustomHeaders();
-  updateCustomHeadersList();
-  chrome.extension.getBackgroundPage().clearModifiedUrls();
-  updateModifiedUrlsList();
-});
+// Refresh UI periodically to catch new findings
+setInterval(updateUI, 5000);
