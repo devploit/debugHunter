@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head><title>Debug Console</title></head>
+<body style="font-family: monospace; background: #1a1a2e; color: #0f0; padding: 20px;">
+<h1>Debug Console - Internal Use Only</h1>
+<pre>
+=== Application Debug Info ===
+Timestamp: 2024-01-15T10:30:00Z
+Environment: PRODUCTION (debug=true)
+Server: app-server-01.internal.com
+
+=== Stack Trace ===
+at Application.initialize (app.js:142)
+at Bootstrap.run (bootstrap.js:58)
+at main (index.js:12)
+
+=== Database Connection ===
+Host: db-master.internal.com
+Database: production_db
+User: app_user
+Password: db_password_exposed!
+
+=== Session Data ===
+user_id: 1
+role: superadmin
+permissions: ["*"]
+
+=== Environment Variables ===
+NODE_ENV=production
+SECRET_KEY=super_secret_key_12345
+API_TOKEN=tok_live_abcdefghijklmnop
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+</pre>
+</body>
+</html>

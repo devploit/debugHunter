@@ -5,97 +5,700 @@
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <style>
-        body {
-          font-family: "SFMono-Medium";
-          background-color: #242A41;
-          color: white;
-          width: 500px;
-          max-height: 2000px;
-          padding: 15px;
-        }
-    
-        h2 {
-          font-size: 12px;
-          margin-bottom: 12px;
-          margin-top: 50px;
-        }
-    
-        a {
-          color: white;
-          text-decoration: none;
-        }
-    
-        a:hover {
-          text-decoration: underline;
-        }
-    
-        ul {
-          list-style-type: none;
-          padding: 0;
-        }
-    
-        li {
-          background-color: #525252;
-          font-size: 10px;
-          margin-bottom: 5px;
-          padding: 5px;
-          border-radius: 3px;
-        }
-    
-        button {
-          background-color: rgb(130, 0, 0);
-          font-family: "SFMono-Medium";
-          border: none;
-          color: white;
-          padding: 5px 10px;
-          text-align: center;
-          text-decoration: none;
-          display: inline-block;
-          font-size: 11px;
-          margin: 5px 2px;
-          cursor: pointer;
-          border-radius: 2px;
-        }
-    
-        button:hover {
-          background-color: #555;
-        }
+      :root {
+        --bg-primary: #0d1117;
+        --bg-secondary: #161b22;
+        --bg-tertiary: #21262d;
+        --bg-hover: #30363d;
+        --border-color: #30363d;
+        --text-primary: #f0f6fc;
+        --text-secondary: #8b949e;
+        --text-muted: #6e7681;
+        --critical: #f85149;
+        --high: #db6d28;
+        --medium: #d29922;
+        --low: #3fb950;
+        --info: #58a6ff;
+        --accent: #a371f7;
+      }
 
-        .banner {
-          position: absolute;
-          top: 15px;
-          left: 20px;
-        }
+      * {
+        box-sizing: border-box;
+      }
 
-        .info-container {
-          position: absolute;
-          top: 20px;
-          right: 20px;
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        width: 550px;
+        max-height: 650px;
+        overflow-y: auto;
+        padding: 0;
+        margin: 0;
+        font-size: 13px;
+      }
 
-        #info-icon {
-          font-size: 18px;
-          color: rgb(255, 255, 255);
-          text-decoration: none;
-        }
+      /* Header */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+        background: var(--accent);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        color: white;
+      }
+
+      .logo-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .logo-version {
+        font-size: 10px;
+        color: var(--text-muted);
+        background: var(--bg-tertiary);
+        padding: 2px 6px;
+        border-radius: 10px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .control-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 6px 8px;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+        font-size: 14px;
+      }
+
+      .control-btn:hover {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+      }
+
+      .control-btn.danger:hover {
+        color: var(--critical);
+      }
+
+      /* Status Bar */
+      .status-bar {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+        font-size: 12px;
+      }
+
+      .status-bar.active {
+        display: flex;
+      }
+
+      .status-spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid var(--border-color);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .status-text {
+        color: var(--text-secondary);
+        flex: 1;
+      }
+
+      .status-domain {
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      /* Search Bar */
+      .search-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .search-icon {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .search-bar input {
+        flex: 1;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px 12px;
+        color: var(--text-primary);
+        font-size: 12px;
+        outline: none;
+        transition: border-color 0.15s ease;
+      }
+
+      .search-bar input:focus {
+        border-color: var(--accent);
+      }
+
+      .search-bar input::placeholder {
+        color: var(--text-muted);
+      }
+
+      .search-clear {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        opacity: 0;
+        transition: all 0.15s ease;
+      }
+
+      .search-clear.visible {
+        opacity: 1;
+      }
+
+      .search-clear:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+      }
+
+      .search-results-info {
+        padding: 8px 16px;
+        background: var(--bg-tertiary);
+        border-bottom: 1px solid var(--border-color);
+        font-size: 11px;
+        color: var(--text-muted);
+        display: none;
+      }
+
+      .search-results-info.visible {
+        display: block;
+      }
+
+      .search-results-info .count {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .finding-item.hidden {
+        display: none;
+      }
+
+      /* Stats Bar */
+      .stats-bar {
+        display: flex;
+        gap: 16px;
+        padding: 12px 16px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .stat {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+      }
+
+      .stat-icon {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      .stat-icon.critical { background: var(--critical); }
+      .stat-icon.high { background: var(--high); }
+      .stat-icon.medium { background: var(--medium); }
+      .stat-icon.low { background: var(--low); }
+
+      .stat-count {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .stat-label {
+        color: var(--text-muted);
+      }
+
+      /* Content */
+      .content {
+        padding: 12px 16px;
+      }
+
+      /* Category */
+      .category {
+        margin-bottom: 16px;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+      }
+
+      .category-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.15s ease;
+      }
+
+      .category-header:hover {
+        background: var(--bg-tertiary);
+      }
+
+      .category-icon {
+        font-size: 14px;
+        width: 20px;
+        text-align: center;
+      }
+
+      .category-icon.paths { color: var(--critical); }
+      .category-icon.headers { color: var(--high); }
+      .category-icon.params { color: var(--info); }
+
+      .category-title {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        flex: 1;
+      }
+
+      .category-count {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+      }
+
+      .category-count.has-items {
+        background: var(--accent);
+        color: white;
+      }
+
+      .toggle-icon {
+        font-size: 10px;
+        color: var(--text-muted);
+        transition: transform 0.2s ease;
+      }
+
+      .category.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+      }
+
+      .category.collapsed .category-list {
+        display: none;
+      }
+
+      /* List */
+      .category-list {
+        border-top: 1px solid var(--border-color);
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .finding-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border-color);
+        transition: background 0.15s ease;
+        gap: 10px;
+      }
+
+      .finding-item:last-child {
+        border-bottom: none;
+      }
+
+      .finding-item:hover {
+        background: var(--bg-tertiary);
+      }
+
+      .finding-severity {
+        width: 4px;
+        min-height: 40px;
+        border-radius: 2px;
+        flex-shrink: 0;
+      }
+
+      .finding-severity.critical { background: var(--critical); }
+      .finding-severity.high { background: var(--high); }
+      .finding-severity.medium { background: var(--medium); }
+      .finding-severity.low { background: var(--low); }
+
+      .finding-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .finding-url {
+        color: var(--text-primary);
+        text-decoration: none;
+        word-break: break-all;
+        font-size: 12px;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .finding-url:hover {
+        color: var(--info);
+        text-decoration: underline;
+      }
+
+      .finding-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .finding-tag {
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .finding-tag.critical { background: rgba(248, 81, 73, 0.2); color: var(--critical); }
+      .finding-tag.high { background: rgba(219, 109, 40, 0.2); color: var(--high); }
+      .finding-tag.medium { background: rgba(210, 153, 34, 0.2); color: var(--medium); }
+      .finding-tag.low { background: rgba(63, 185, 80, 0.2); color: var(--low); }
+
+      .finding-info {
+        font-size: 10px;
+        color: var(--text-muted);
+      }
+
+      .finding-actions {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+      }
+
+      .action-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        transition: all 0.15s ease;
+      }
+
+      .action-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+      }
+
+      .action-btn.diff:hover { color: var(--accent); }
+      .action-btn.remove:hover { color: var(--critical); }
+
+      .empty-state {
+        padding: 20px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .empty-state i {
+        font-size: 24px;
+        margin-bottom: 8px;
+        display: block;
+        opacity: 0.5;
+      }
+
+      /* Diff Modal */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .modal-overlay.active {
+        display: flex;
+      }
+
+      .modal {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        width: 100%;
+        max-width: 95%;
+        max-height: 90%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .modal-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 18px;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      .modal-close:hover {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+      }
+
+      .diff-container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .diff-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid var(--border-color);
+        overflow: hidden;
+      }
+
+      .diff-panel:last-child {
+        border-right: none;
+      }
+
+      .diff-panel-header {
+        padding: 10px 14px;
+        background: var(--bg-tertiary);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .diff-panel-header.original { color: var(--critical); }
+      .diff-panel-header.modified { color: var(--low); }
+
+      .diff-content {
+        flex: 1;
+        overflow: auto;
+        padding: 12px;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 11px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-all;
+        background: var(--bg-primary);
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: var(--bg-primary);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: var(--bg-hover);
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--text-muted);
+      }
     </style>
   </head>
   <body>
-    <div class="banner"><img src="images/banner.png" width="140" height="40" ></div>
-    <div class="info-container">
-      <a href="#" id="options-link"><i class="fa fa-cogs" aria-hidden="true"></i></a>
-      <a href="#" id="info-icon"><i class="fa fa-info-circle" aria-hidden="true"></i></a>
-      <a href="#" id="clear-all"><i class="fas fa-trash" aria-hidden="true"></i></a>
-      </a>
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">
+        <div class="logo-icon">
+          <i class="fas fa-bug"></i>
+        </div>
+        <span class="logo-text">debugHunter</span>
+        <span class="logo-version">v2.0</span>
+      </div>
+      <div class="controls">
+        <button class="control-btn" id="options-link" title="Settings">
+          <i class="fas fa-cog"></i>
+        </button>
+        <button class="control-btn" id="info-icon" title="GitHub">
+          <i class="fab fa-github"></i>
+        </button>
+        <button class="control-btn danger" id="clear-all" title="Clear All">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
     </div>
-    <div class="window">
-    <h2>Sensitive Paths</h2>
-    <ul id="sensitivePaths"></ul>
-    <h2>Custom Headers</h2>
-    <ul id="customHeaders"></ul>
-    <h2>Query Params</h2>
-    <ul id="queryParams"></ul>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar">
+      <div class="status-spinner"></div>
+      <span class="status-text">Scanning <span class="status-domain" id="status-domain"></span>...</span>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" id="search-input" placeholder="Filter by domain, path, or keyword...">
+      <button class="search-clear" id="search-clear" title="Clear">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Search Results Info -->
+    <div class="search-results-info" id="search-results-info">
+      Showing <span class="count" id="search-count">0</span> matching findings
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-icon critical"></div>
+        <span class="stat-count" id="stat-critical">0</span>
+        <span class="stat-label">Critical</span>
+      </div>
+      <div class="stat">
+        <div class="stat-icon high"></div>
+        <span class="stat-count" id="stat-high">0</span>
+        <span class="stat-label">High</span>
+      </div>
+      <div class="stat">
+        <div class="stat-icon medium"></div>
+        <span class="stat-count" id="stat-medium">0</span>
+        <span class="stat-label">Medium</span>
+      </div>
+      <div class="stat">
+        <div class="stat-icon low"></div>
+        <span class="stat-count" id="stat-low">0</span>
+        <span class="stat-label">Low</span>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Sensitive Paths -->
+      <div class="category" data-type="paths">
+        <div class="category-header">
+          <i class="fas fa-folder-open category-icon paths"></i>
+          <span class="category-title">Sensitive Paths</span>
+          <span class="category-count" id="paths-count">0</span>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="category-list" id="paths-list"></div>
+      </div>
+
+      <!-- Custom Headers -->
+      <div class="category" data-type="headers">
+        <div class="category-header">
+          <i class="fas fa-exchange-alt category-icon headers"></i>
+          <span class="category-title">Custom Headers</span>
+          <span class="category-count" id="headers-count">0</span>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="category-list" id="headers-list"></div>
+      </div>
+
+      <!-- Debug Parameters -->
+      <div class="category" data-type="params">
+        <div class="category-header">
+          <i class="fas fa-code category-icon params"></i>
+          <span class="category-title">Debug Parameters</span>
+          <span class="category-count" id="params-count">0</span>
+          <i class="fas fa-chevron-down toggle-icon"></i>
+        </div>
+        <div class="category-list" id="params-list"></div>
+      </div>
+    </div>
+
+    <!-- Diff Modal -->
+    <div class="modal-overlay" id="diff-modal">
+      <div class="modal">
+        <div class="modal-header">
+          <span class="modal-title" id="modal-title">Response Diff</span>
+          <button class="modal-close" id="modal-close">&times;</button>
+        </div>
+        <div class="diff-container">
+          <div class="diff-panel">
+            <div class="diff-panel-header original">Original Response</div>
+            <pre class="diff-content" id="diff-original"></pre>
+          </div>
+          <div class="diff-panel">
+            <div class="diff-panel-header modified">Modified Response</div>
+            <pre class="diff-content" id="diff-modified"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="popup.js"></script>
-    </div>
   </body>
 </html>

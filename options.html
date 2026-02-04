@@ -1,105 +1,627 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+  <title>debugHunter - Settings</title>
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.4/css/all.css">
   <style>
-    body {
-      font-family: 'Roboto';
-      margin: 30px;
-      max-width: 600px;
-      color: white;
-      background-color: #242A41;
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --bg-hover: #30363d;
+      --border-color: #30363d;
+      --text-primary: #f0f6fc;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent: #a371f7;
+      --accent-hover: #8957e5;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      --info: #58a6ff;
     }
 
-    h1 {
-      font-size: 24px;
-      font-weight: 300;
-      margin-bottom: 20px;
-    }
-
-    label {
-      font-size: 16px;
-      font-weight: 400;
-      display: block;
-      margin-bottom: 5px;
-    }
-
-    input[type="range"] {
-      width: 100%;
-      margin-bottom: 20px;
-    }
-
-    p {
-      font-size: 14px;
-      font-weight: 300;
-      margin-top: 5px;
-    }
-    ul {
-      list-style: none;
+    * {
+      box-sizing: border-box;
+      margin: 0;
       padding: 0;
     }
-    li {
-      background-color: #333;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 10px;
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* Header */
+    .header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
     }
-    form {
-      margin-top: 20px;
+
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
     }
-    form input {
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      width: 70%;
+
+    .header-text h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 4px;
     }
-    form button {
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      background-color: #337ab7;
+
+    .header-text p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* Sections */
+    .section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .section-header i {
+      font-size: 16px;
+      color: var(--accent);
+    }
+
+    .section-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .section-content {
+      padding: 20px;
+    }
+
+    /* Form Groups */
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .form-group .description {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* Range Inputs */
+    .range-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .range-container input[type="range"] {
+      flex: 1;
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .range-container input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .range-container input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+
+    .range-value {
+      min-width: 60px;
+      padding: 6px 12px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      color: var(--accent);
+    }
+
+    /* Checkboxes */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .checkbox-item:hover {
+      background: var(--bg-hover);
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      background: var(--bg-primary);
+      border: 2px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      margin-top: 2px;
+    }
+
+    .checkbox-item input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .checkbox-item input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       color: white;
-      margin-left: 10px;
-      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
     }
-    form button:hover {
-      background-color: #286090;
+
+    .checkbox-content {
+      flex: 1;
     }
-    button.remove {
-      background-color: #d9534f;
-      cursor: pointer;
+
+    .checkbox-content .title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 2px;
     }
-    button.remove {
-      background-color: #d9534f;
+
+    .checkbox-content .desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Select */
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
       cursor: pointer;
-      border-radius: 8px; /* new line */
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Text Input */
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Textarea */
+    textarea {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Whitelist */
+    .whitelist-container {
+      margin-top: 12px;
+    }
+
+    .whitelist-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .whitelist-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+    }
+
+    .whitelist-item span {
+      font-size: 13px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+
+    .whitelist-item button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .whitelist-item button:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    .add-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .add-form input {
+      flex: 1;
+    }
+
+    .add-form button {
+      padding: 10px 20px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .add-form button:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Info Box */
+    .info-box {
+      display: flex;
+      gap: 12px;
+      padding: 14px;
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    .info-box i {
+      color: var(--info);
+      font-size: 16px;
+      margin-top: 2px;
+    }
+
+    .info-box p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* Status indicator */
+    .status-saved {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(63, 185, 80, 0.15);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--success);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .status-saved.show {
+      opacity: 1;
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 20px 0;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
     }
   </style>
-  <title>Options</title>
 </head>
 <body>
-  <h1>Options</h1>
-  <label for="similarityThreshold">Similarity Threshold</label>
-  <input type="range" id="similarityThreshold" name="similarityThreshold" min="0" max="1" step="0.01" value="0.95">
-  <p>Current value: <span id="similarityThresholdValue">0.95</span></p>
-  <br><p>The similarity threshold determines the minimum similarity score required for a pair of URLs to be considered the same. The value ranges from 0 to 1, where 0 means that any pair of URLs is considered the same, and 1 means that only identical URLs are considered the same. The closer the value is to 1, the more similar the URLs need to be to be considered the same.</p>
-  <p><b>Default value is: 0.95</b></p>
-  <br><br><label for="checkInterval">Check Internal (minutes)</label>
-  <input type="range" id="checkInterval" name="checkInterval" min="1" max="5000" step="1" value="480">
-  <p>Current value: <span id="checkIntervalValue">480</span></p>
-  <br><br><p>Check Interval determines the frequency at which the extension checks for changes on the websites you visit. It is expressed in minutes, with a minimum of 1 minute and a maximum of 5000 minutes. Adjusting the slider will immediately save the new interval to your settings. Note: Lower intervals may impact performance.</b></p>
-  <p><b>Default value is: 480 minutes (8 hours)</b></p>
-  <br><br><label for="whitelist">Whitelisted Domains</label>
-  <ul id="whitelistDisplay"></ul>
-  <form id="addWhitelistForm">
-    <input type="text" id="newWhitelistDomain" placeholder="Enter new domain">
-    <button type="submit">Add to Whitelist</button>
-  </form>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">
+        <i class="fas fa-bug"></i>
+      </div>
+      <div class="header-text">
+        <h1>debugHunter Settings</h1>
+        <p>Configure detection behavior and reduce false positives</p>
+      </div>
+    </div>
+
+    <!-- Detection Mode -->
+    <div class="section">
+      <div class="section-header">
+        <i class="fas fa-crosshairs"></i>
+        <h2>Detection Strategy</h2>
+      </div>
+      <div class="section-content">
+        <div class="form-group">
+          <label>Detection Mode</label>
+          <select id="detectionMode">
+            <option value="smart">Smart (Recommended) - Multi-factor analysis</option>
+            <option value="aggressive">Aggressive - More findings, more FPs</option>
+            <option value="conservative">Conservative - Fewer FPs, may miss some</option>
+            <option value="keywords-only">Keywords Only - Only flag debug indicators</option>
+          </select>
+          <p class="description">Smart mode combines multiple signals: status code changes, content length, debug keywords, and similarity.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="form-group">
+          <label>Detection Requirements</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="requireDebugIndicators" checked>
+              <div class="checkbox-content">
+                <div class="title">Require Debug Indicators</div>
+                <div class="desc">Only flag responses that contain debug keywords (stack traces, secrets, error messages)</div>
+              </div>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="detectStatusChanges" checked>
+              <div class="checkbox-content">
+                <div class="title">Detect Status Code Changes</div>
+                <div class="desc">Flag when a parameter changes the HTTP status (e.g., 403→200, 200→500)</div>
+              </div>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="detectHeaderChanges" checked>
+              <div class="checkbox-content">
+                <div class="title">Detect Response Header Changes</div>
+                <div class="desc">Flag when response headers reveal debug info (X-Debug, X-Powered-By, Server)</div>
+              </div>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="filterDynamicContent" checked>
+              <div class="checkbox-content">
+                <div class="title">Filter Dynamic Content</div>
+                <div class="desc">Remove timestamps, CSRF tokens, and session IDs before comparing responses</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thresholds -->
+    <div class="section">
+      <div class="section-header">
+        <i class="fas fa-sliders-h"></i>
+        <h2>Thresholds</h2>
+      </div>
+      <div class="section-content">
+        <div class="form-group">
+          <label>Similarity Threshold <span class="status-saved" id="similaritySaved"><i class="fas fa-check"></i> Saved</span></label>
+          <div class="range-container">
+            <input type="range" id="similarityThreshold" min="0.5" max="0.99" step="0.01" value="0.90">
+            <span class="range-value" id="similarityValue">0.90</span>
+          </div>
+          <p class="description">How similar two responses must be to be considered "the same". Lower = more aggressive (more FPs). Used as secondary check in Smart mode.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="form-group">
+          <label>Minimum Content Length Difference <span class="status-saved" id="lengthSaved"><i class="fas fa-check"></i> Saved</span></label>
+          <div class="range-container">
+            <input type="range" id="minLengthDiff" min="50" max="2000" step="50" value="200">
+            <span class="range-value" id="lengthValue">200</span>
+          </div>
+          <p class="description">Minimum bytes difference to consider a response "changed". Higher = fewer false positives from minor dynamic content.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="form-group">
+          <label>Check Interval (minutes) <span class="status-saved" id="intervalSaved"><i class="fas fa-check"></i> Saved</span></label>
+          <div class="range-container">
+            <input type="range" id="checkInterval" min="1" max="1440" step="1" value="480">
+            <span class="range-value" id="intervalValue">480</span>
+          </div>
+          <p class="description">How often to re-check the same URL. Default: 480 minutes (8 hours).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dynamic Content Filters -->
+    <div class="section">
+      <div class="section-header">
+        <i class="fas fa-filter"></i>
+        <h2>Dynamic Content Filters</h2>
+      </div>
+      <div class="section-content">
+        <div class="form-group">
+          <label>Patterns to Remove Before Comparison</label>
+          <textarea id="dynamicPatterns" placeholder="One regex pattern per line..."></textarea>
+          <p class="description">Regex patterns for dynamic content to strip before comparing responses. Examples: timestamps, CSRF tokens, nonces.</p>
+        </div>
+
+        <div class="info-box">
+          <i class="fas fa-lightbulb"></i>
+          <p>
+            <strong>Default patterns include:</strong> Unix timestamps, ISO dates, UUIDs, CSRF tokens, session IDs, nonces, and common cache busters.
+            Add custom patterns here if you're seeing false positives from specific dynamic content.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rate Limiting -->
+    <div class="section">
+      <div class="section-header">
+        <i class="fas fa-tachometer-alt"></i>
+        <h2>Rate Limiting</h2>
+      </div>
+      <div class="section-content">
+        <div class="form-group">
+          <label>Base Delay Between Requests (ms) <span class="status-saved" id="delaySaved"><i class="fas fa-check"></i> Saved</span></label>
+          <div class="range-container">
+            <input type="range" id="baseDelay" min="100" max="2000" step="100" value="300">
+            <span class="range-value" id="delayValue">300</span>
+          </div>
+          <p class="description">Minimum delay between requests to the same domain. Auto-increases on rate limiting.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="form-group">
+          <label>Max Concurrent Checks</label>
+          <select id="maxConcurrent">
+            <option value="1">1 - Safest, slowest</option>
+            <option value="2">2 - Balanced</option>
+            <option value="3" selected>3 - Default</option>
+            <option value="5">5 - Faster, riskier</option>
+          </select>
+          <p class="description">How many different check types can run in parallel (params, headers, paths).</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Whitelist -->
+    <div class="section">
+      <div class="section-header">
+        <i class="fas fa-shield-alt"></i>
+        <h2>Whitelist</h2>
+      </div>
+      <div class="section-content">
+        <div class="form-group">
+          <label>Whitelisted Domains</label>
+          <p class="description">Domains to skip scanning. Supports wildcards (*.example.com).</p>
+          <div class="whitelist-container">
+            <div class="whitelist-items" id="whitelistItems"></div>
+            <form class="add-form" id="addWhitelistForm">
+              <input type="text" id="newWhitelistDomain" placeholder="example.com or *.example.com">
+              <button type="submit"><i class="fas fa-plus"></i> Add</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>debugHunter v2.0 • <a href="https://github.com/devploit/debugHunter" target="_blank">GitHub</a> • Exposing what should stay hidden</p>
+    </div>
+  </div>
+
   <script src="options.js"></script>
 </body>
 </html>
