@@ -1,6 +1,8 @@
 /**
- * debugHunter v2.0.1 - Background Service Worker
+ * debugHunter v2.0.2 - Background Service Worker
  * Multi-factor detection with configurable comparison strategies
+ * - Added redirect detection to filter false positives on paths
+ * - Added natural variance measurement to filter false positives on dynamic sites
  */
 
 import { stringSimilarity } from './similarity.js';
@@ -325,7 +327,7 @@ function compareHeaders(original, modified) {
 // MULTI-FACTOR COMPARISON
 // ============================================================================
 
-async function analyzeResponseDifference(originalResponse, modifiedResponse, originalText, modifiedText, settings) {
+async function analyzeResponseDifference(originalResponse, modifiedResponse, originalText, modifiedText, settings, naturalVariance = null) {
   const result = {
     isDifferent: false,
     confidence: 0,
@@ -333,6 +335,7 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
     severity: 'low',
     debugIndicators: null,
     headerChanges: [],
+    requiresVarianceCheck: false, // Flag to trigger control request verification
   };
 
   // 1. Status code change detection
@@ -362,9 +365,14 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
     }
   }
 
-  // 3. Content length difference
+  // 3. Content length difference (variance-aware)
   const lengthDiff = Math.abs(modifiedText.length - originalText.length);
-  if (lengthDiff >= settings.minLengthDiff) {
+  // If we know the site's natural variance, use it as minimum threshold
+  const effectiveLengthThreshold = naturalVariance
+    ? Math.max(settings.minLengthDiff, naturalVariance.lengthDiff * 1.5)
+    : settings.minLengthDiff;
+
+  if (lengthDiff >= effectiveLengthThreshold) {
     result.reasons.push(`Content length diff: ${lengthDiff} bytes`);
     result.confidence += Math.min(lengthDiff / 100, 25);
   }
@@ -381,7 +389,7 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
     else if (debugCheck.level === 'medium' && !['critical', 'high'].includes(result.severity)) result.severity = 'medium';
   }
 
-  // 5. Similarity check (after filtering dynamic content)
+  // 5. Similarity check (after filtering dynamic content, variance-aware)
   let originalFiltered = originalText;
   let modifiedFiltered = modifiedText;
 
@@ -391,9 +399,21 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
   }
 
   const similarity = stringSimilarity.compareTwoStrings(originalFiltered, modifiedFiltered);
-  if (similarity < settings.similarityThreshold) {
+
+  // Adjust threshold based on natural variance (if measured)
+  // If site naturally varies by 5%, we need more than 5% difference to flag
+  const effectiveSimilarityThreshold = naturalVariance
+    ? Math.min(settings.similarityThreshold, naturalVariance.similarity - 0.05)
+    : settings.similarityThreshold;
+
+  if (similarity < effectiveSimilarityThreshold) {
     result.reasons.push(`Similarity: ${(similarity * 100).toFixed(1)}%`);
     result.confidence += (1 - similarity) * 30;
+
+    // If flagging based on similarity alone (no debug indicators), mark for variance verification
+    if (!naturalVariance && !debugCheck.found) {
+      result.requiresVarianceCheck = true;
+    }
   }
 
   // Determine if response is different based on mode
@@ -598,6 +618,53 @@ async function getUrlBaseline(url) {
 }
 
 // ============================================================================
+// NATURAL VARIANCE MEASUREMENT (for dynamic sites)
+// ============================================================================
+
+const varianceCache = new Map();
+
+async function measureNaturalVariance(url, baselineText, settings) {
+  // Check cache first (valid for 2 minutes)
+  if (varianceCache.has(url)) {
+    const cached = varianceCache.get(url);
+    if (Date.now() - cached.timestamp < 120000) {
+      return cached.variance;
+    }
+  }
+
+  try {
+    // Make a control request (identical to baseline - no params/headers)
+    const controlResponse = await rateLimitedFetch(url);
+    const controlText = await controlResponse.text();
+
+    // Filter dynamic content before comparison
+    let baselineFiltered = baselineText;
+    let controlFiltered = controlText;
+
+    if (settings.filterDynamicContent) {
+      baselineFiltered = filterDynamicContent(baselineText, settings.dynamicPatterns);
+      controlFiltered = filterDynamicContent(controlText, settings.dynamicPatterns);
+    }
+
+    // Calculate natural variance between two identical requests
+    const naturalSimilarity = stringSimilarity.compareTwoStrings(baselineFiltered, controlFiltered);
+    const naturalLengthDiff = Math.abs(controlText.length - baselineText.length);
+
+    const variance = {
+      similarity: naturalSimilarity,
+      lengthDiff: naturalLengthDiff,
+      // Site is "highly dynamic" if two identical requests differ significantly
+      isHighlyDynamic: naturalSimilarity < 0.95,
+    };
+
+    varianceCache.set(url, { variance, timestamp: Date.now() });
+    return variance;
+  } catch (e) {
+    return null;
+  }
+}
+
+// ============================================================================
 // PARAMETER CHECKING (uses cached baseline)
 // ============================================================================
 
@@ -609,7 +676,6 @@ function appendParam(url, param) {
 
 async function checkParams(url, baseline = null) {
   const settings = await getSettings();
-  const allParams = [...debugParams.high, ...debugParams.medium];
 
   try {
     // Use provided baseline or fetch new one
@@ -624,6 +690,9 @@ async function checkParams(url, baseline = null) {
       ...debugParams.medium.map(p => ({ ...p, confidence: 'medium' })),
     ];
 
+    // Track if we've measured variance for this URL (lazy - only when needed)
+    let measuredVariance = null;
+
     for (const param of sortedParams) {
       const modifiedUrl = appendParam(url, param);
 
@@ -631,11 +700,29 @@ async function checkParams(url, baseline = null) {
         const modifiedResponse = await rateLimitedFetch(modifiedUrl);
         const modifiedText = await modifiedResponse.text();
 
-        const analysis = await analyzeResponseDifference(
+        // First analysis without variance
+        let analysis = await analyzeResponseDifference(
           baseline.mockResponse, modifiedResponse,
           baseline.text, modifiedText,
-          settings
+          settings,
+          measuredVariance
         );
+
+        // If flagged but needs variance verification (ambiguous signal)
+        if (analysis.isDifferent && analysis.requiresVarianceCheck && !measuredVariance) {
+          // Measure natural variance with a control request
+          measuredVariance = await measureNaturalVariance(url, baseline.text, settings);
+
+          if (measuredVariance && measuredVariance.isHighlyDynamic) {
+            // Re-analyze with variance knowledge
+            analysis = await analyzeResponseDifference(
+              baseline.mockResponse, modifiedResponse,
+              baseline.text, modifiedText,
+              settings,
+              measuredVariance
+            );
+          }
+        }
 
         if (analysis.isDifferent) {
           await addFinding('params', {
@@ -672,6 +759,9 @@ async function checkHeaders(url, baseline = null) {
     }
     if (!baseline) return;
 
+    // Track if we've measured variance for this URL (lazy - only when needed)
+    let measuredVariance = null;
+
     for (const header of customHeaders) {
       try {
         const headers = new Headers();
@@ -680,11 +770,29 @@ async function checkHeaders(url, baseline = null) {
         const modifiedResponse = await rateLimitedFetch(url, { headers });
         const modifiedText = await modifiedResponse.text();
 
-        const analysis = await analyzeResponseDifference(
+        // First analysis without variance
+        let analysis = await analyzeResponseDifference(
           baseline.mockResponse, modifiedResponse,
           baseline.text, modifiedText,
-          settings
+          settings,
+          measuredVariance
         );
+
+        // If flagged but needs variance verification (ambiguous signal)
+        if (analysis.isDifferent && analysis.requiresVarianceCheck && !measuredVariance) {
+          // Measure natural variance with a control request
+          measuredVariance = await measureNaturalVariance(url, baseline.text, settings);
+
+          if (measuredVariance && measuredVariance.isHighlyDynamic) {
+            // Re-analyze with variance knowledge
+            analysis = await analyzeResponseDifference(
+              baseline.mockResponse, modifiedResponse,
+              baseline.text, modifiedText,
+              settings,
+              measuredVariance
+            );
+          }
+        }
 
         if (analysis.isDifferent) {
           await addFinding('headers', {
@@ -712,6 +820,24 @@ async function checkHeaders(url, baseline = null) {
 // Cache for domain baselines and soft-404 fingerprints
 const domainCache = new Map();
 
+// Normalize redirect URL for comparison (resolves relative URLs, removes trailing slashes)
+function normalizeRedirectUrl(location, baseUrl) {
+  try {
+    const resolved = new URL(location, baseUrl);
+    // Return pathname without trailing slash for consistent comparison
+    return resolved.pathname.replace(/\/$/, '') || '/';
+  } catch (e) {
+    return location;
+  }
+}
+
+// Check if a redirect is just URL normalization (trailing slash, case change)
+function isNormalizationRedirect(originalPath, redirectPath) {
+  const normalizedOriginal = originalPath.replace(/\/$/, '').toLowerCase();
+  const normalizedRedirect = redirectPath.replace(/\/$/, '').toLowerCase();
+  return normalizedOriginal === normalizedRedirect;
+}
+
 async function getDomainBaseline(baseUrl) {
   if (domainCache.has(baseUrl)) {
     const cached = domainCache.get(baseUrl);
@@ -725,18 +851,32 @@ async function getDomainBaseline(baseUrl) {
     const baseResponse = await rateLimitedFetch(baseUrl);
     const baseText = await baseResponse.text();
 
-    // Get soft-404 fingerprint (request a random non-existent path)
+    // Get soft-404 fingerprint and catch-all redirect (request a random non-existent path)
     const randomPath = `/${Math.random().toString(36).substring(7)}-${Date.now()}`;
     let soft404Fingerprint = null;
     let soft404Length = 0;
+    let catchAllRedirect = null;
 
     try {
-      const soft404Response = await rateLimitedFetch(baseUrl + randomPath);
-      const soft404Text = await soft404Response.text();
+      // Use redirect: 'manual' to detect catch-all redirects
+      const soft404Response = await rateLimitedFetch(baseUrl + randomPath, { redirect: 'manual' });
+
+      // Check if the random path redirects somewhere (catch-all redirect pattern)
+      if (soft404Response.status >= 300 && soft404Response.status < 400) {
+        const location = soft404Response.headers.get('location');
+        if (location) {
+          // Normalize the redirect URL for comparison
+          catchAllRedirect = normalizeRedirectUrl(location, baseUrl);
+        }
+      }
+
+      // For fingerprinting, follow the redirect to get actual content
+      const finalResponse = await rateLimitedFetch(baseUrl + randomPath);
+      const soft404Text = await finalResponse.text();
       soft404Length = soft404Text.length;
       // Create a fingerprint based on content structure, not exact content
       soft404Fingerprint = {
-        status: soft404Response.status,
+        status: finalResponse.status,
         length: soft404Text.length,
         hasTitle: /<title>/i.test(soft404Text),
         isSoft404: isSoft404(soft404Text),
@@ -750,6 +890,7 @@ async function getDomainBaseline(baseUrl) {
       baseLength: baseText.length,
       soft404Fingerprint,
       soft404Length,
+      catchAllRedirect,
       timestamp: Date.now(),
     };
 
@@ -763,26 +904,53 @@ async function getDomainBaseline(baseUrl) {
 function matchesSoft404(response, text, fingerprint) {
   if (!fingerprint) return false;
 
-  // If it returned the same status as our random 404 probe
+  // If it returned the same status as our random 404 probe (non-200)
   if (fingerprint.status === response.status && fingerprint.status !== 200) {
     return true;
   }
 
-  // If content length is very similar to soft-404 (within 10%)
   const lengthDiff = Math.abs(text.length - fingerprint.length);
-  if (lengthDiff < fingerprint.length * 0.1 && fingerprint.isSoft404) {
+  const lengthRatio = lengthDiff / fingerprint.length;
+
+  // If content length is nearly identical (within 3%), very likely the same page
+  // This catches soft-404s that return 200 without "404" text
+  if (lengthRatio < 0.03) {
+    return true;
+  }
+
+  // If content length is similar (within 10%) AND has soft-404 indicators
+  if (lengthRatio < 0.1 && fingerprint.isSoft404) {
     return true;
   }
 
   return false;
 }
 
-async function checkPathWithHead(baseUrl, path, settings) {
+async function checkPathWithHead(baseUrl, path, settings, catchAllRedirect = null) {
   const testUrl = baseUrl + path;
 
   try {
-    // First, try HEAD request to check existence (saves bandwidth)
-    const headResponse = await rateLimitedFetch(testUrl, { method: 'HEAD' });
+    // First, try HEAD request with redirect: manual to detect redirects
+    const headResponse = await rateLimitedFetch(testUrl, { method: 'HEAD', redirect: 'manual' });
+
+    // Check for redirects (3xx status codes)
+    if (headResponse.status >= 300 && headResponse.status < 400) {
+      const location = headResponse.headers.get('location');
+      if (location) {
+        const redirectPath = normalizeRedirectUrl(location, baseUrl);
+
+        // Allow URL normalization redirects (trailing slash, etc.)
+        if (isNormalizationRedirect(path, redirectPath)) {
+          // Continue checking - this is just a trailing slash redirect
+        } else if (catchAllRedirect && redirectPath === catchAllRedirect) {
+          // This path redirects to the same place as random paths - false positive
+          return null;
+        } else {
+          // Redirects to a different specific location - likely auth/error page
+          return null;
+        }
+      }
+    }
 
     // Only proceed if status indicates potential content
     if (headResponse.status === 200 || headResponse.status === 403) {
@@ -800,6 +968,23 @@ async function checkPathWithHead(baseUrl, path, settings) {
   } catch (e) {
     // Try direct GET if HEAD fails (some servers don't support HEAD)
     try {
+      // Also check for redirects on GET
+      const getResponse = await rateLimitedFetch(testUrl, { redirect: 'manual' });
+
+      if (getResponse.status >= 300 && getResponse.status < 400) {
+        const location = getResponse.headers.get('location');
+        if (location) {
+          const redirectPath = normalizeRedirectUrl(location, baseUrl);
+          if (!isNormalizationRedirect(path, redirectPath)) {
+            if (catchAllRedirect && redirectPath === catchAllRedirect) {
+              return null; // Same as catch-all - false positive
+            }
+            return null; // Different redirect - skip
+          }
+        }
+      }
+
+      // If not a redirect, or a normalization redirect, follow it
       const response = await rateLimitedFetch(testUrl);
       if (response.status === 200) {
         return { response, url: testUrl };
@@ -837,7 +1022,7 @@ async function checkPaths(url) {
 
       const results = await Promise.all(
         batch.map(({ path, severity }) =>
-          checkPathWithHead(baseUrl, path, settings).then(result =>
+          checkPathWithHead(baseUrl, path, settings, baseline.catchAllRedirect).then(result =>
             result ? { ...result, severity, path } : null
           )
         )
