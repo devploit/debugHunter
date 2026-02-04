@@ -1,5 +1,5 @@
 /**
- * debugHunter v2.0.5 - Background Service Worker
+ * debugHunter v2.0.6 - Background Service Worker
  * Multi-factor detection with configurable comparison strategies
  * - Added redirect detection to filter false positives on paths
  * - Added natural variance measurement to filter false positives on dynamic sites
@@ -996,7 +996,7 @@ async function checkPaths(url) {
 
   try {
     const urlObj = new URL(url);
-    const baseUrl = `${urlObj.protocol}//${urlObj.hostname}`;
+    const baseUrl = `${urlObj.protocol}//${urlObj.host}`; // Use .host to include port
 
     // Get cached domain baseline
     const baseline = await getDomainBaseline(baseUrl);
