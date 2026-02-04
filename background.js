@@ -1,5 +1,5 @@
 /**
- * debugHunter v2.0.4 - Background Service Worker
+ * debugHunter v2.0.5 - Background Service Worker
  * Multi-factor detection with configurable comparison strategies
  * - Added redirect detection to filter false positives on paths
  * - Added natural variance measurement to filter false positives on dynamic sites
@@ -932,36 +932,31 @@ async function checkPathWithHead(baseUrl, path, settings, catchAllRedirect = nul
   const testUrl = baseUrl + path;
 
   try {
-    // First, try HEAD request with redirect: manual to detect redirects
+    // First, try HEAD request with redirect: manual to detect catch-all redirects
     const headResponse = await rateLimitedFetch(testUrl, { method: 'HEAD', redirect: 'manual' });
 
     // Check for redirects (3xx status codes)
     if (headResponse.status >= 300 && headResponse.status < 400) {
       const location = headResponse.headers.get('location');
-      if (location) {
+      if (location && catchAllRedirect) {
         const redirectPath = normalizeRedirectUrl(location, baseUrl);
-
-        // Allow URL normalization redirects (trailing slash, etc.)
-        if (isNormalizationRedirect(path, redirectPath)) {
-          // Continue checking - this is just a trailing slash redirect
-        } else if (catchAllRedirect && redirectPath === catchAllRedirect) {
-          // This path redirects to the same place as random paths - false positive
-          return null;
-        } else {
-          // Redirects to a different specific location - likely auth/error page
-          return null;
+        // Only skip if it redirects to the SAME place as the random path probe
+        if (redirectPath === catchAllRedirect && !isNormalizationRedirect(path, redirectPath)) {
+          return null; // Catch-all redirect - false positive
         }
       }
+      // For other redirects, continue and follow them (could be legit /admin -> /admin/login)
     }
 
-    // Only proceed if status indicates potential content
-    if (headResponse.status === 200 || headResponse.status === 403) {
+    // Only proceed if status indicates potential content (or redirect that we'll follow)
+    if (headResponse.status === 200 || headResponse.status === 403 ||
+        (headResponse.status >= 300 && headResponse.status < 400)) {
       const contentLength = parseInt(headResponse.headers.get('content-length') || '0');
 
-      // Skip if too small (likely empty or error)
-      if (contentLength > 0 && contentLength < 30) return null;
+      // Skip if too small (likely empty or error) - but only for 200 responses
+      if (headResponse.status === 200 && contentLength > 0 && contentLength < 30) return null;
 
-      // Now do full GET to analyze content
+      // Now do full GET to analyze content (this will follow redirects)
       const response = await rateLimitedFetch(testUrl);
       if (response.status === 200) {
         return { response, url: testUrl };
@@ -970,23 +965,20 @@ async function checkPathWithHead(baseUrl, path, settings, catchAllRedirect = nul
   } catch (e) {
     // Try direct GET if HEAD fails (some servers don't support HEAD)
     try {
-      // Also check for redirects on GET
+      // Check for catch-all redirect first
       const getResponse = await rateLimitedFetch(testUrl, { redirect: 'manual' });
 
-      if (getResponse.status >= 300 && getResponse.status < 400) {
+      if (getResponse.status >= 300 && getResponse.status < 400 && catchAllRedirect) {
         const location = getResponse.headers.get('location');
         if (location) {
           const redirectPath = normalizeRedirectUrl(location, baseUrl);
-          if (!isNormalizationRedirect(path, redirectPath)) {
-            if (catchAllRedirect && redirectPath === catchAllRedirect) {
-              return null; // Same as catch-all - false positive
-            }
-            return null; // Different redirect - skip
+          if (redirectPath === catchAllRedirect && !isNormalizationRedirect(path, redirectPath)) {
+            return null; // Catch-all redirect - false positive
           }
         }
       }
 
-      // If not a redirect, or a normalization redirect, follow it
+      // Follow the redirect and get final content
       const response = await rateLimitedFetch(testUrl);
       if (response.status === 200) {
         return { response, url: testUrl };
