@@ -143,15 +143,29 @@ Access settings via the **gear icon** in the popup:
 
 ## Testing
 
-A test environment is included to verify the extension works correctly:
+A dynamic test server is included to verify the extension works correctly:
 
 ```bash
 cd test/
-./start-server-macos.command    # macOS (opens browser automatically)
+python3 server.py               # Recommended: Dynamic server
+```
+
+Alternative (static server, limited functionality):
+```bash
+./start-server-macos.command    # macOS
 ./start-server.sh               # Linux/other
 ```
 
-This starts a local server on port 9000 with fake sensitive files and debug endpoints.
+The dynamic server (`server.py`) serves different content based on debug params/headers:
+- **Normal request**: Clean production page (no sensitive data)
+- **With debug params**: Debug page with exposed credentials, stack traces, etc.
+
+This mimics real-world behavior where debug endpoints only expose sensitive data when triggered.
+
+Test URLs:
+- `http://localhost:9000/` — Normal page
+- `http://localhost:9000/?debug=1` — Debug mode triggered
+- `http://localhost:9000/.env` — Sensitive path
 
 ## Technical Details
 
@@ -161,6 +175,16 @@ This starts a local server on port 9000 with fake sensitive files and debug endp
 - **Privacy** — All analysis happens locally, no external requests
 
 ## Changelog
+
+### v2.0.6
+- **Reduced false positives on dynamic sites** (login pages, news sites, etc.)
+  - Redirect detection: Filters paths that redirect to catch-all destinations
+  - Natural variance measurement: Detects highly dynamic sites
+  - Smart mode now requires clear evidence (debug indicators or status changes)
+  - Debug indicators must be NEW (not present in original response)
+- **Fixed path detection on non-standard ports** (e.g., localhost:9000)
+- **New dynamic test server** (`test/server.py`) that mimics real-world behavior
+- Improved soft-404 detection (content length comparison)
 
 ### v2.0.0
 - Complete rewrite with Manifest V3

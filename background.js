@@ -1,5 +1,5 @@
 /**
- * debugHunter v2.0.5 - Background Service Worker
+ * debugHunter v2.0.6 - Background Service Worker
  * Multi-factor detection with configurable comparison strategies
  * - Added redirect detection to filter false positives on paths
  * - Added natural variance measurement to filter false positives on dynamic sites
@@ -298,6 +298,11 @@ function containsDebugIndicators(text) {
   return { found: false, level: null };
 }
 
+function getLevelPriority(level) {
+  const priorities = { critical: 4, high: 3, medium: 2, low: 1 };
+  return priorities[level] || 0;
+}
+
 function extractInterestingHeaders(response) {
   const found = {};
   for (const header of debugHeaders) {
@@ -368,18 +373,26 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
 
   // 3. Content length difference (variance-aware)
   const lengthDiff = Math.abs(modifiedText.length - originalText.length);
-  // If we know the site's natural variance, use it as minimum threshold
-  const effectiveLengthThreshold = naturalVariance
-    ? Math.max(settings.minLengthDiff, naturalVariance.lengthDiff * 1.5)
-    : settings.minLengthDiff;
+  // If we know the site's natural variance, only count if difference EXCEEDS natural variance
+  const isLengthWithinVariance = naturalVariance && lengthDiff <= naturalVariance.lengthDiff * 1.2;
 
-  if (lengthDiff >= effectiveLengthThreshold) {
+  if (!isLengthWithinVariance && lengthDiff >= settings.minLengthDiff) {
     result.reasons.push(`Content length diff: ${lengthDiff} bytes`);
     result.confidence += Math.min(lengthDiff / 100, 25);
   }
 
-  // 4. Debug indicator detection
-  const debugCheck = containsDebugIndicators(modifiedText);
+  // 4. Debug indicator detection - only count if NEW (not present in original)
+  const debugCheckModified = containsDebugIndicators(modifiedText);
+  const debugCheckOriginal = containsDebugIndicators(originalText);
+
+  // Only consider debug indicators that are NEW (caused by the param/header)
+  // If the same level of indicator exists in original, it's not caused by our test
+  const debugCheck = {
+    found: debugCheckModified.found && (!debugCheckOriginal.found ||
+           getLevelPriority(debugCheckModified.level) > getLevelPriority(debugCheckOriginal.level)),
+    level: debugCheckModified.level,
+  };
+
   if (debugCheck.found) {
     result.debugIndicators = debugCheck;
     result.reasons.push(`Debug indicators found: ${debugCheck.level}`);
@@ -401,13 +414,11 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
 
   const similarity = stringSimilarity.compareTwoStrings(originalFiltered, modifiedFiltered);
 
-  // Adjust threshold based on natural variance (if measured)
-  // If site naturally varies by 5%, we need more than 5% difference to flag
-  const effectiveSimilarityThreshold = naturalVariance
-    ? Math.min(settings.similarityThreshold, naturalVariance.similarity - 0.05)
-    : settings.similarityThreshold;
+  // If we know the site's natural variance, only count if similarity is WORSE than natural variance
+  // E.g., if site naturally has 92% similarity between requests, only flag if this request is < 90%
+  const isSimilarityWithinVariance = naturalVariance && similarity >= naturalVariance.similarity - 0.02;
 
-  if (similarity < effectiveSimilarityThreshold) {
+  if (!isSimilarityWithinVariance && similarity < settings.similarityThreshold) {
     result.reasons.push(`Similarity: ${(similarity * 100).toFixed(1)}%`);
     result.confidence += (1 - similarity) * 30;
   }
@@ -417,6 +428,9 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
   if (!naturalVariance && !debugCheck.found && result.confidence > 0) {
     result.requiresVarianceCheck = true;
   }
+
+  // Only critical/high/medium indicators count as significant (low like "Warning:" can appear in normal pages)
+  const hasSignificantDebugIndicators = debugCheck.found && ['critical', 'high', 'medium'].includes(debugCheck.level);
 
   // Determine if response is different based on mode
   switch (settings.detectionMode) {
@@ -437,12 +451,26 @@ async function analyzeResponseDifference(originalResponse, modifiedResponse, ori
 
     case 'smart':
     default:
-      // Multi-factor: needs significant confidence
-      // If debug indicators found, lower threshold
-      if (settings.requireDebugIndicators) {
-        result.isDifferent = result.confidence >= 40 && debugCheck.found;
+      // Smart mode: require clear evidence to avoid false positives on dynamic sites
+      const hasStatusBypass = originalResponse.status === 403 && modifiedResponse.status === 200;
+      const hasServerError = modifiedResponse.status >= 500;
+      // Check if content is significantly different (not just dynamic variation)
+      const isSignificantlyDifferent = similarity < 0.70;
+      // Debug indicators in modified response (even if also in original)
+      const hasAnyDebugIndicators = debugCheckModified.found && ['critical', 'high', 'medium'].includes(debugCheckModified.level);
+
+      if (hasStatusBypass || hasServerError) {
+        // Clear signal - status change is strong evidence
+        result.isDifferent = true;
+      } else if (hasSignificantDebugIndicators) {
+        // NEW debug indicators found - report
+        result.isDifferent = result.confidence >= 40;
+      } else if (hasAnyDebugIndicators && isSignificantlyDifferent) {
+        // Debug indicators exist AND content is very different - likely more debug info triggered
+        result.isDifferent = true;
       } else {
-        result.isDifferent = result.confidence >= 50;
+        // No clear evidence - don't report to avoid FPs on dynamic sites
+        result.isDifferent = false;
       }
       break;
   }
@@ -625,18 +653,30 @@ async function getUrlBaseline(url) {
 
 const varianceCache = new Map();
 
-async function measureNaturalVariance(url, baselineText, settings) {
+async function measureNaturalVariance(url, baselineText, settings, useRandomParam = false) {
+  // Cache key includes whether we're measuring with params
+  const cacheKey = useRandomParam ? `${url}#withParam` : url;
+
   // Check cache first (valid for 2 minutes)
-  if (varianceCache.has(url)) {
-    const cached = varianceCache.get(url);
+  if (varianceCache.has(cacheKey)) {
+    const cached = varianceCache.get(cacheKey);
     if (Date.now() - cached.timestamp < 120000) {
       return cached.variance;
     }
   }
 
   try {
-    // Make a control request (identical to baseline - no params/headers)
-    const controlResponse = await rateLimitedFetch(url);
+    // For params, measure variance by adding a random param to see how the site responds
+    // This catches sites that return different content when ANY query param is present
+    let controlUrl = url;
+    if (useRandomParam) {
+      const randomParam = `_rnd${Math.random().toString(36).substring(7)}`;
+      const urlObj = new URL(url);
+      urlObj.searchParams.set(randomParam, '1');
+      controlUrl = urlObj.href;
+    }
+
+    const controlResponse = await rateLimitedFetch(controlUrl);
     const controlText = await controlResponse.text();
 
     // Filter dynamic content before comparison
@@ -648,18 +688,18 @@ async function measureNaturalVariance(url, baselineText, settings) {
       controlFiltered = filterDynamicContent(controlText, settings.dynamicPatterns);
     }
 
-    // Calculate natural variance between two identical requests
+    // Calculate natural variance between baseline and control
     const naturalSimilarity = stringSimilarity.compareTwoStrings(baselineFiltered, controlFiltered);
     const naturalLengthDiff = Math.abs(controlText.length - baselineText.length);
 
     const variance = {
       similarity: naturalSimilarity,
       lengthDiff: naturalLengthDiff,
-      // Site is "highly dynamic" if two identical requests differ significantly
+      // Site is "highly dynamic" if requests differ significantly
       isHighlyDynamic: naturalSimilarity < 0.95,
     };
 
-    varianceCache.set(url, { variance, timestamp: Date.now() });
+    varianceCache.set(cacheKey, { variance, timestamp: Date.now() });
     return variance;
   } catch (e) {
     return null;
@@ -712,8 +752,9 @@ async function checkParams(url, baseline = null) {
 
         // If flagged but needs variance verification (no debug indicators found)
         if (analysis.isDifferent && analysis.requiresVarianceCheck && !measuredVariance) {
-          // Measure natural variance with a control request
-          measuredVariance = await measureNaturalVariance(url, baseline.text, settings);
+          // Measure variance with a random param to see how site responds to ANY query param
+          // This catches sites that return different content when params are present (vs absent)
+          measuredVariance = await measureNaturalVariance(url, baseline.text, settings, true);
 
           if (measuredVariance) {
             // Re-analyze with variance knowledge - always re-check, not just for highly dynamic sites
@@ -996,7 +1037,7 @@ async function checkPaths(url) {
 
   try {
     const urlObj = new URL(url);
-    const baseUrl = `${urlObj.protocol}//${urlObj.hostname}`;
+    const baseUrl = `${urlObj.protocol}//${urlObj.host}`; // Use .host to include port
 
     // Get cached domain baseline
     const baseline = await getDomainBaseline(baseUrl);
