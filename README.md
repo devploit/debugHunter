@@ -97,9 +97,8 @@ Env: dev
 **Medium**
 ```
 /swagger-ui.html      /swagger.json         /api-docs
-/openapi.json         /robots.txt           /.well-known/security.txt
-/web.config           /.htaccess            /Dockerfile
-/docker-compose.yml
+/openapi.json         /web.config           /.htaccess            
+/Dockerfile           /docker-compose.yml
 ```
 </details>
 
